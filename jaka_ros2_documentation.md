@@ -74,7 +74,7 @@ The two flowcharts below illustrate the package structure for JAKA ROS1 and JAKA
   <img src="images/Figure 1-2: JAKA_ROS2_Package_Structure.png" alt="JAKA ROS2 Package Structure">
 </figure>
 <div align="center">
-  <h5 id="figure-1-2"><strong>Figure 1-2: JAKA ROS2 Package Structure</strong></h5>
+  <h4 id="figure-1-2"><strong>Figure 1-2: JAKA ROS2 Package Structure</strong></h4>
 </div>
 
 In transitioning from ROS 1 (Catkin) to ROS 2 (Colcon), the layout of the JAKA robot packages remains mostly the same, but the build and installation process has changed.  
@@ -109,7 +109,11 @@ To ensure stability and performance, this package has been tested and verified o
 - While this package is primarily tested on **ROS 2 Humble**, it may be possible to build and run it on **ROS 2 Galactic** or **Iron**, but compatibility is not guaranteed.
 - Future versions of this package may extend support for newer **ROS 2 distributions**.
 
-### 1.4.2 Minimum Hardware Requirements
+### 1.4.2 Supported Controller Versions
+
+To ensure optimal performance and compatibility with the **JAKA ROS 2 package**, we have established specific requirements for the controller firmware. The minimal supported controller version is **1.7.1.46**, which provides the essential functionalities required for basic operations. For improved stability, enhanced features, and seamless integration with both ROS 2 and MoveIt 2, the recommended controller version is **1.7.2.16**. We advise users to upgrade to the recommended version, as it has been thoroughly tested and is currently the latest available version.
+
+### 1.4.3 Minimum Hardware Requirements
 
 The following table displays the recommended minimum system requirements based on **ROS 2** and **MoveIt 2**'s typical resource consumption, as well as industry best practices for running robotic applications efficiently.
 
@@ -409,12 +413,12 @@ The `jaka_planner` package provides an action server for executing planned traje
 - **Message Type**: `control_msgs::action::FollowJointTrajectory`
 - **Functionality**:
   - Receives and executes joint trajectory goals.
-  - Monitors execution progress and reports status.
-  - Supports goal cancellation during execution.  
+  - Monitors execution progress.
+  - Provides continuous state updates and confirms completion.    
 
 # Getting Started (Tutorials)
 
-## 4.1.	Basic Tutorial: Controlling JAKA Robot with jaka_driver Package
+## 4.1. Basic Tutorial: Controlling JAKA Robot with jaka_driver Package
 
 The `jaka_driver` package is a control driver that enables communication with the JAKA robot via ROS 2 services and topics.  
 This section provides example service calls and executable runs that request various services or SDK functions to send basic control commands to the robot and check its status.

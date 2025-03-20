@@ -85,3 +85,5 @@ Use RViz to plan and execute motions for the JAKA robot with **interactive marke
 ## jaka_ros2 Official Documentation
 
 For **detailed instructions and advanced usage** of jaka_ros2 package, refer to the [JAKA ROS 2 Documentation](jaka_ros2_documentation.md).
+
+For **Chinese version** of the documentation, refer to  [JAKA ROS 2 Documentation-中文版](jaka_ros2_documentation-中文版.md).

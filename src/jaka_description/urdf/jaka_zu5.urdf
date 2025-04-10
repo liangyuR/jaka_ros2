@@ -1,4 +1,4 @@
-<!-- <?xml version="1.0" encoding="utf-8"?> -->
+<?xml version="1.0" encoding="utf-8"?>
 <!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
      Commit Version: 1.5.1-0-g916b5db  Build Version: 1.5.7152.31018
      For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
@@ -477,8 +477,10 @@
     </transmission>
  
     <gazebo>
-        <plugin name="gazebo_ros2_control" filename="libgazebo_ros2_control.so">
-            <robotNamespace>/</robotNamespace>
+        <!-- <plugin name="gazebo_ros2_control" filename="libgazebo_ros2_control.so"> -->
+        <plugin name="ign_ros2_control::IgnitionROS2ControlPlugin" filename="libign_ros2_control-system.so">
+          <parameters>$(find jaka_zu5_moveit_config)/config/ros2_controllers.yaml</parameters>
+          <robotNamespace>/</robotNamespace>
         </plugin>
     </gazebo>
 </robot>

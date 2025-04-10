@@ -14,6 +14,12 @@ find_package(ament_cmake REQUIRED)
 find_package(urdf REQUIRED)
 find_package(xacro REQUIRED)
 
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  ament_lint_auto_find_test_dependencies()
+
+endif()
+
 # Install the URDF, meshes, config, and launch files
 install(DIRECTORY urdf/
   DESTINATION share/${PROJECT_NAME}/urdf

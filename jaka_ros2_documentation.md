@@ -22,7 +22,9 @@
 4. [Getting Started (Tutorials)](#getting-started-tutorials)  
    4.1. [Basic Tutorial: Controlling JAKA Robot with jaka_driver Package](#41-basic-tutorial-controlling-jaka-robot-with-jaka_driver-package)  
    4.2. [MoveIt 2 Tutorial: Planning and Execution](#42-moveit-2-tutorial-planning-and-execution)  
-   4.3. [Real Robot Tutorial: Controlling Real JAKA Robot](#43-real-robot-tutorial-controlling-real-jaka-robot)
+   4.3. [Gazebo Simulation Tutorial: Real-Time Trajectory Execution in Gazebo](#43-gazebo-simulation-tutorial-real-time-trajectory-execution-in-gazebo)  
+   4.4. [Real Robot Tutorial: Controlling Real JAKA Robot](#44-real-robot-tutorial-controlling-real-jaka-robot)  
+   4.5. [Running moveit_test for Basic Motion Testing](#45-running-moveit_test-for-basic-motion-testing)
 
 
 # Introduction
@@ -46,22 +48,21 @@ It is intended for developers familiar with basic **ROS 2 concepts** who want to
 ### Scope  
 
 #### JAKA Robot Models  
-The current release of the **JAKA ROS 2 package** officially supports the following cobot models: `JAKA Zu 3`, `JAKA Zu 7`, `JAKA Zu 12`, `JAKA A 12`, `JAKA S 5`, and `JAKA MiniCobo`.  
+The current release of the **JAKA ROS 2 package** supports all officially available JAKA 6-DOF cobot models, including the `JAKA A series`, `JAKA C series`, `JAKA Pro series`, `JAKA S series`, `JAKA Zu series`, and `JAKA MiniCobo`.  
 All configuration files, drivers, and tutorials in this manual are designed for these models.  
 
 #### Software Features Within Scope:
 - **MoveIt Integration**: Motion planning and execution, including collision checking, kinematics, and trajectory generation.  
 - **RViz Visualization and Simulation**:  
   - Real-time visualization of robot models, joint states, and planned trajectories.  
-  - Although RViz is primarily a visualization tool, the package provides a basic **simulation-like environment** to preview planned motions and interact with the robot’s states.  
+  - Although RViz is primarily a visualization tool, the package provides a basic **simulation-like environment** to preview planned motions and interact with the robot’s states. 
+- **Gazebo Simulation Environment:** Full dynamic simulation of robots, including physics interactions and real-world dynamics. Gazebo is ideal for testing control algorithms and the dynamic response of the robot in a realistic simulated environment. 
 - **Control Driver Interface**: A ROS 2 driver node for sending commands to the robot’s controller and receiving feedback on its state.  
 
-#### Out-of-Scope Features:
-- This manual **does not cover** setting up or running JAKA robots in **Gazebo** or any other **3D physics simulation environment**. 
 
 ## 1.3. JAKA ROS2 Package Structure
 
-The two flowcharts below illustrate the package structure for JAKA ROS1 and JAKA ROS2 packages, respectively.
+The two flowcharts below illustrate the package structure for **JAKA ROS1** and **JAKA ROS2** packages, respectively.
 
 <figure id="figure-1-1">
   <img src="images/Figure 1-1: JAKA_ROS1_Package_Structure.png" alt="JAKA ROS1 Package Structure">
@@ -103,11 +104,11 @@ Below is an overview of the key differences and why they matter.
 The **JAKA ROS 2 package** is designed to provide seamless integration of JAKA collaborative robots within the ROS 2 ecosystem.  
 To ensure stability and performance, this package has been tested and verified on specific software and hardware configurations, which are outlined below.
 
-### 1.4.1 Supported ROS 2 Distributions
+### 1.4.1 Supported ROS 2 and Gazebo Distributions
 
-- Currently, this package is officially tested and supported on **Ubuntu 22.04 (Jammy Jellyfish)** with **ROS 2 Humble**.
-- While this package is primarily tested on **ROS 2 Humble**, it may be possible to build and run it on **ROS 2 Galactic** or **Iron**, but compatibility is not guaranteed.
-- Future versions of this package may extend support for newer **ROS 2 distributions**.
+- Currently, this package is officially tested and supported on **Ubuntu 22.04 (Jammy Jellyfish)** with **ROS 2 Humble**. While this package is primarily tested on **ROS 2 Humble**, it may be possible to build and run it on **ROS 2 Galactic** or **Iron**, but compatibility is not guaranteed.
+- This package is designed to work with **Gazebo Ignition Fortress**, which is the recommended simulation environment for **ROS 2 Humble** and provides stable, high-performance physics-based simulations. The package has also been tested on **Gazebo Classic**, and while functional, it is not recommended due to being outdated for ROS 2 Humble. Users may experience instability and performance issues.
+- Future releases of this package may extend support for newer ROS 2 and Gazebo distributions as they become officially available.
 
 ### 1.4.2 Supported Controller Versions
 
@@ -126,7 +127,7 @@ The following table displays the recommended minimum system requirements based o
 
 # 1.5. ROS2 Basic Commands
 
-In this section, we introduce fundamental ROS 2 commands that are commonly used when working with the JAKA ROS 2 package. These commands allow users to build, run, and debug ROS 2 nodes, manage topics, services, parameters, and launch files.  
+In this section, we introduce fundamental ROS 2 commands that are commonly used when working with the **JAKA ROS 2 package**. These commands allow users to build, run, and debug ROS 2 nodes, manage topics, services, parameters, and launch files.  
 Unlike ROS 1, ROS 2 introduces a more modular and flexible system, using **Colcon** for building workspaces, **DDS (Data Distribution Service)** for communication, and replacing commands like `rostopic`, `rosnode`, and `rosservice` with the `ros2` CLI tool.
 
 The table below provides a summary of essential ROS 2 commands and their functions.
@@ -249,7 +250,7 @@ source ~/.bashrc
 ### 2.1.3 Additional dependencies  
 
 **MoveIt2 Installation**
-- MoveIt 2 is required for motion planning and execution. Ensure MoveIt 2 (**version 2.2+** recommended) is installed before using the JAKA ROS 2 package.  
+- MoveIt 2 is required for motion planning and execution. Ensure MoveIt 2 (**version 2.2+** recommended) is installed before using the **JAKA ROS 2 package**.  
 - Follow the official MoveIt 2 documentation for installation: Binary installation (official Debian package via apt): [MoveIt 2 Binary Installation](https://moveit.ai/install-moveit2/binary/).  
 
     ```bash
@@ -258,10 +259,46 @@ source ~/.bashrc
     source /opt/ros/humble/setup.bash
     ```
 
+**Gazebo Fortress Installation**
+-	This package supports **Gazebo Fortress** for simulation with ROS 2 Humble. Ensure that ROS 2 integration with Gazebo Fortress is properly set up by installing the ros-gz bridge package.
+-	To install Gazebo Fortress, follow the official Ignition Gazebo installation guide: [Gazebo Fortress Binary Installation](https://gazebosim.org/docs/fortress/install_ubuntu/).
+
+**1) Install some necessary tools:**  
+```bash
+sudo apt-get update
+sudo apt-get install lsb-release gnupg
+```  
+
+**2) Install Ignition Fortress:**  
+```bash
+sudo curl https://packages.osrfoundation.org/gazebo.gpg --output /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] http://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null
+sudo apt-get update
+sudo apt-get install ignition-fortress
+```  
+
+**3) Install ROS 2 integration (ros-gz Bridge):** to allow communication between ROS 2 Humble and Gazebo Fortress.
+```bash
+sudo apt install -y ros-humble-ros-gz
+```  
+
+**4) Set up environment variables:**
+```bash
+echo 'source /usr/share/gz/setup.bash' >> ~/.bashrc
+source ~/.bashrc
+```  
+
+**5) Additional Configuration for Ubuntu Virtual Machine Users**
+If you are running Gazebo Fortress inside a **virtual machine**, you may experience **flickering grids** or **a blank rendering window** due to limited hardware acceleration. To fix this, force software rendering by adding:  
+```bash
+echo 'export LIBGL_ALWAYS_SOFTWARE=true' >> ~/.bashrc
+source ~/.bashrc
+```  
+
 ## 2.2. Installing JAKA ROS 2 Package 
 
 **1) Cloning from GitHub or Downloading Release**  
-To obtain the JAKA ROS 2 package, you can either:
+To obtain the **JAKA ROS 2 package**, you can either:
 
 - Clone the repository from GitHub:  
     a. Clone with HTTPS:  
@@ -294,7 +331,7 @@ echo "source ~/jaka_ros2/install/setup.bash" >> ~/.bashrc
 source ~/.bashrc
 ```
 
-This completes the installation and setup process for the JAKA ROS 2 package. You are now ready to proceed with using the package for robot control and motion planning.
+This completes the installation and setup process for the **JAKA ROS 2 package**. You are now ready to proceed with using the package for robot control and motion planning.
 
 ## 2.3. Switching to a Different SDK Version
 
@@ -411,14 +448,14 @@ The following table provides an overview of the executables in `jaka_planner` pa
 The `jaka_planner` package provides an action server for executing planned trajectories:
 - **Action Name**: `/jaka_<robot_model>_controller/follow_joint_trajectory` (`<robot_model>`: `zu3`, `s5`, `a12`, `minicobo`, etc.)
 - **Message Type**: `control_msgs::action::FollowJointTrajectory`
-- **Functionality**:
+- **Functionality:**
   - Receives and executes joint trajectory goals.
   - Monitors execution progress.
-  - Provides continuous state updates and confirms completion.    
+  - Provides continuous state updates and confirms completion.  
 
 # Getting Started (Tutorials)
 
-## 4.1. Basic Tutorial: Controlling JAKA Robot with jaka_driver Package
+## 4.1.	Basic Tutorial: Controlling JAKA Robot with jaka_driver Package
 
 The `jaka_driver` package is a control driver that enables communication with the JAKA robot via ROS 2 services and topics.  
 This section provides example service calls and executable runs that request various services or SDK functions to send basic control commands to the robot and check its status.
@@ -624,11 +661,11 @@ ros2 run jaka_driver sdk_test --ros-args -p ip:=<robot_ip>
 
 ## 4.2. MoveIt 2 Tutorial: Planning and Execution
 
-MoveIt 2 is a powerful motion planning framework that enables trajectory planning and execution for robotic arms. While the current `jaka_ros2` package does not support Gazebo simulation, it provides **RViz-based simulation**. This allows users to perform trajectory planning and execution within the RViz environment, which is useful when a physical JAKA robot is not available for testing software.
+MoveIt 2 is a powerful motion planning framework that enables trajectory planning and execution for robotic arms. While the updated `jaka_ros2` package now supports **Gazebo simulation** for real-time trajectory execution, it still provides an **RViz-based simulation mode** for cases where Gazebo cannot be used due to system limitations, hardware constraints, or other requirements.
 
 To enable this RViz simulation mode, modifications are required in the `launches.py` file that comes with the default MoveIt 2 package installation. The `jaka_ros2` package provides an adjusted version of this file, which users can replace in their system to achieve the desired functionality. 
 
-The key modification made to `launches.py` is the addition of the `use_sim` parameter. When set to `true`, this parameter enables simulation mode. By default, `use_sim` is set to `false`.
+The key modification made to `launches.py` is the addition of the `use_rviz_sim` parameter. When set to `true`, this parameter enables simulation mode. By default, `use_rviz_sim` is set to `false`.
 
 ### 4.2.1 Setting Up MoveIt 2 with JAKA Robot (RViz Simulation)
 
@@ -644,7 +681,7 @@ The key modification made to `launches.py` is the addition of the `use_sim` para
 
 3) Launch MoveIt 2 in RViz simulation mode using the following command:  
 ```bash
-ros2 launch jaka_<robot_model>_moveit_config demo.launch.py use_sim:=true
+ros2 launch jaka_<robot_model>_moveit_config demo.launch.py use_rviz_sim:=true
 ```
 
 > **Note:** Replace `<robot_model>` with the appropriate JAKA robot model name (e.g., `zu3`, `s5`, `a12`, `minicobo`, etc.).
@@ -669,11 +706,79 @@ ros2 launch jaka_<robot_model>_moveit_config demo.launch.py use_sim:=true
     </figcaption>
   </figure>
 
-This process allows users to test motion planning and execution in a simulated RViz environment without requiring a physical robot.
+This approach allows users to perform trajectory planning and execution within the RViz environment without a physical JAKA robot or 3D simulation software tool, ensuring flexibility and broader accessibility in various development environments.
 
-## 4.3. Real Robot Tutorial: Controlling Real JAKA Robot
+## 4.3 Gazebo Simulation Tutorial: Real-Time Trajectory Execution in Gazebo
 
-### 4.3.1 Safety Precautions & Robot Setup
+Gazebo is a powerful simulation environment that provides realistic physics and visualizations for robotics applications. In this section, we demonstrate how to use Gazebo with the `jaka_ros2` package to simulate real-time trajectory planning and execution in a simulation environment.
+
+Similar to the RViz simulation described in [Section 4.2](#42-moveit-2-tutorial-planning-and-execution), this tutorial uses customized launch files (i.e., a modified `launches.py`). The key modification made to [launches.py](./launches.py) is the addition of functions used to independently launch Gazebo for model visualization and to launch an integrated Gazebo simulation environment with RViz.
+
+### 4.3.1 Setting Up Gazebo Simulation with JAKA ROS2
+
+**1) Ensure required packages are installed:**  
+   Before proceeding, make sure that **Gazebo Ignition Fortress** and the `jaka_ros2` package are properly installed.
+
+**2) Update customized launch files:**  
+   Replace the default `launches.py` file with the customized version provided by the `jaka_ros2` package (details in [Section 4.2.1](#421-setting-up-moveit-2-with-jaka-robot-rviz-simulation)).
+
+**3) Launch Gazebo for Model Visualization Only:**  
+   To visualize the JAKA robot model in Gazebo, run the following command using the customized `gazebo.launch.py` file:  
+   ```bash
+   ros2 launch jaka_<robot_model>_moveit_config gazebo.launch.py
+   ```  
+
+> **Note:** Replace `<robot_model>` with the appropriate JAKA robot model name (e.g., zu3, s5, a12, minicobo, etc.).
+
+This command starts Gazebo Fortress with the default world (an empty world containing only a ground plane and a light source) and spawns the robot based on the published robot description. The robot will be visible in the Gazebo GUI for inspection.
+
+  <figure id="figure-4-16">
+    <img src="images/Figure 4-16: Launch Gazebo Simulation Independently.png" alt="Independent Gazebo simulation Execution" width="1200">
+    <figcaption>
+      <p align="center"><strong>Figure 4-16: Independent Gazebo Simulation Execution</strong></p>
+    </figcaption>
+  </figure>
+
+**4) Launch Gazebo with RViz for Trajectory Planning and Execution:**  
+   To enable real-time trajectory planning and execution in a simulation environment, run the `demo_gazebo.launch.py` file that integrates Gazebo with RViz:  
+   ```bash
+   ros2 launch jaka_<robot_model>_moveit_config demo_gazebo.launch.py
+   ```  
+
+> **Note:** Replace `<robot_model>` with the appropriate JAKA robot model name (e.g., zu3, s5, a12, minicobo, etc.).
+
+### 4.3.2	Demonstrating Trajectory Execution in Gazebo
+
+**1) Launch the demo environment:**  
+   After following the steps in [Section 4.3.1](#431-setting-up-gazebo-simulation-with-jaka-ros2), the robot model will appear in both **Gazebo** and **RViz** environments.
+
+**2) Set the target pose:**  
+   - Move the **interactive marker** at the robot’s end-effector in RViz to the desired position.  
+   - Alternatively, select a **Goal State** from the RViz interface.
+
+**3) Plan and execute the trajectory:**  
+   - In RViz, click **"Plan & Execute"** to generate and visualize the robot's trajectory.  
+   - The robot in **Gazebo** should now execute the planned trajectory in real-time.
+
+  <figure id="figure-4-17">
+    <img src="images/Figure 4-17: RViz for Demo Gazebo Simulation Execution.png" alt="RViz for Demo Gazebo Simulation Execution">
+    <figcaption>
+      <p align="center"><strong>Figure 4-17: RViz for Demo Gazebo Simulation Execution</strong></p>
+    </figcaption>
+  </figure>
+
+  <figure id="figure-4-18">
+    <img src="images/Figure 4-18: Demo Gazebo Simulation with RViz Execution.png" alt="Demo Gazebo simulation with RViz Execution" width="1200">
+    <figcaption>
+      <p align="center"><strong>Figure 4-18: Demo Gazebo Simulation with RViz Execution</strong></p>
+    </figcaption>
+  </figure>
+
+This process allows users to test motion planning and execution in gazebo simulation environment without requiring a physical robot.
+
+## 4.4. Real Robot Tutorial: Controlling Real JAKA Robot
+
+### 4.4.1 Safety Precautions & Robot Setup
 
 Before controlling a real JAKA robot, it is essential to ensure proper setup and safety measures to prevent collisions, equipment damage, or potential hazards. This section outlines key safety considerations, payload configuration, and operational best practices.
 
@@ -696,7 +801,7 @@ When attaching external tools such as grippers or other end-effectors, the paylo
 - **Simulate Trajectories in RViz:** Before executing a movement on the real robot, first plan and verify it in RViz to check for potential collisions, singularity errors, or out-of-range motions.
 - **Set Safe Motion Parameters:** Define appropriate velocity and acceleration limits for safe execution using MoveIt 2 configuration files available for each robot model package or on the RViz interface.
 
-### 4.3.2 Launching the `jaka_planner` Package
+### 4.4.2 Launching the `jaka_planner` Package
 
 This section describes how to start the MoveIt 2 server and RViz to plan and execute trajectories with a real JAKA robot.
 
@@ -709,10 +814,10 @@ To launch the MoveIt 2 server, open a terminal and execute the following command
 ros2 launch jaka_planner moveit_server.launch.py robot_ip:=<robot_ip> robot_model:=<robot_model>
 ```
 
-<figure id="figure-4-16">
-  <img src="images/Figure 4-16: Launch MoveIt 2 Server.png" alt="Launch MoveIt 2 Server">
+<figure id="figure-4-19">
+  <img src="images/Figure 4-19: Launch MoveIt 2 Server.png" alt="Launch MoveIt 2 Server">
   <figcaption>
-    <p align="center"><strong>Figure 4-16: Launch MoveIt 2 Server Command Output</strong></p>
+    <p align="center"><strong>Figure 4-19: Launch MoveIt 2 Server Command Output</strong></p>
   </figcaption>    
 </figure>
 
@@ -723,32 +828,32 @@ In a new terminal, start the MoveIt 2 RViz interface using the following command
 ros2 launch jaka_<robot_model>_moveit_config demo.launch.py
 ```
 
-<figure id="figure-4-17">
-  <img src="images/Figure 4-17: Launch Demo Moveit Config.png" alt="Launch Demo Moveit Config">
+<figure id="figure-4-20">
+  <img src="images/Figure 4-20: Launch Demo Moveit Config.png" alt="Launch Demo Moveit Config">
   <figcaption>
-    <p align="center"><strong>Figure 4-17: Launch Demo Moveit Config Command Output</strong></p>
+    <p align="center"><strong>Figure 4-20: Launch Demo Moveit Config Command Output</strong></p>
   </figcaption> 
 </figure>
 
 Once launched, the RViz interface will open, displaying the robot model. The visualization should reflect the current real-world position and orientation of the physical robot.
 
-<figure id="figure-4-18">
-  <img src="images/Figure 4-18: RViz Real Robot Vizualization.png" alt="RViz Real Robot Vizualization">
+<figure id="figure-4-21">
+  <img src="images/Figure 4-21: RViz Real Robot Vizualization.png" alt="RViz Real Robot Vizualization">
   <figcaption>
-    <p align="center"><strong>Figure 4-18: RViz Real Robot Vizualization</strong></p>
+    <p align="center"><strong>Figure 4-21: RViz Real Robot Vizualization</strong></p>
   </figcaption>   
 </figure>
 
-<figure id="figure-4-19">
-  <img src="images/Figure 4-19: JAKA App Real Robot Vizualization.png" alt="JAKA App Real Robot Vizualization">
+<figure id="figure-4-22">
+  <img src="images/Figure 4-22: JAKA App Real Robot Vizualization.png" alt="JAKA App Real Robot Vizualization">
   <figcaption>
-    <p align="center"><strong>Figure 4-19: JAKA App Real Robot Vizualization</strong></p>
+    <p align="center"><strong>Figure 4-22: JAKA App Real Robot Vizualization</strong></p>
   </figcaption>   
 </figure>
 
-> **Note:** The default value of **use_sim** parameter is **false**, so when using Moveit 2 and Rviz with a real robot, there is no need to explicitly specify `use_sim:=false` unless you want to ensure clarity.
+> **Note:** The default value of **use_rviz_sim** parameter is **false**, so when using Moveit 2 and Rviz with a real robot, there is no need to explicitly specify `use_rviz_sim:=false` unless you want to ensure clarity.
 
-### 4.3.3 Planning & Executing Trajectory in RViz with Real Robot
+### 4.4.3 Planning & Executing Trajectory in RViz with Real Robot
 
 Once the MoveIt 2 server and RViz interface are running, you can plan and execute trajectories directly from RViz. In RViz, you can plan and execute motions for the JAKA robot using **interactive markers**.  
 When defining a target position, there are two execution methods:
@@ -764,31 +869,32 @@ When defining a target position, there are two execution methods:
 - Click **"Plan"** to generate and visualize the trajectory in RViz before executing it.
 - If the trajectory is **safe and feasible**, click **"Execute"** to send the motion command to the robot.
 
-<figure id="figure-4-20">
-  <img src="images/Figure 4-20: RViz Real Robot Trajectory Planning and Execution.png" alt="RViz Real Robot Trajectory Planning and Execution">
+<figure id="figure-4-23">
+  <img src="images/Figure 4-23: RViz Real Robot Trajectory Planning and Execution.png" alt="RViz Real Robot Trajectory Planning and Execution">
   <figcaption>
-    <p align="center"><strong>Figure 4-20: RViz Real Robot Trajectory Planning and Execution</strong></p>
+    <p align="center"><strong>Figure 4-23: RViz Real Robot Trajectory Planning and Execution</strong></p>
   </figcaption>   
 </figure>
 
-<figure id="figure-4-21">
-  <img src="images/Figure 4-21: JAKA App Real Robot Trajectory Execution.png" alt="JAKA App Real Robot Trajectory Execution">
+<figure id="figure-4-24">
+  <img src="images/Figure 4-24: JAKA App Real Robot Trajectory Execution.png" alt="JAKA App Real Robot Trajectory Execution">
   <figcaption>
-    <p align="center"><strong>Figure 4-21: JAKA App Real Robot Trajectory Execution</strong></p>
+    <p align="center"><strong>Figure 4-24: JAKA App Real Robot Trajectory Execution</strong></p>
   </figcaption>   
 </figure>
 
-### 4.3.4 Running `moveit_test` for Basic Motion Testing
+## 4.5. Running moveit_test for Basic Motion Testing
 
-The `moveit_test` executable provides a simple way for users to test MoveIt 2's motion planning and execution on a JAKA robot. It serves as an initial verification step for newcomers to see how the JAKA ROS 2 package interacts with and controls JAKA robots. This test can be performed with a real robot or in RViz simulation mode.
+The `moveit_test` executable provides a simple way for users to test MoveIt 2's motion planning and execution on a JAKA robot. It serves as an initial verification step for newcomers to see how the **JAKA ROS 2 package** interacts with and controls JAKA robots. This test can be performed using a **real robot**, in **RViz simulation mode**, or with **Gazebo simulation**.
 
 #### Purpose of `moveit_test`
 - Provides an easy starting point for users to verify motion control with MoveIt 2.
-- Helps test communication between JAKA ROS 2 package and JAKA robots.
+- Helps test communication between **JAKA ROS 2 package** and JAKA robots.
 - Allows users to validate the robot’s motion planning in joint space using a predefined sequence of joint space movements.
 
-#### Startup Method
-Ensure the MoveIt server is running before executing `moveit_test`. Run the following commands in separate terminals:
+### 4.5.1	Running moveit_test with Real Robot
+To perform the test with a real robot, ensure the MoveIt server is running before executing `moveit_test`.  
+Run the following commands in separate terminals:
 ```bash
 ros2 launch jaka_planner moveit_server.launch.py ip:=<robot_ip> model:=<robot_model>
 ros2 launch jaka_<robot_model>_moveit_config demo.launch.py
@@ -796,33 +902,79 @@ ros2 run jaka_planner moveit_test --ros-args -p model:=<robot_model>
 ```
 
 > **Note:**  
+> - Replace `<robot_ip>` with the actual IP address of the robot.
 > - Replace `<robot_model>` with the corresponding JAKA robot model.  
-> - The default robot model is set to `zu3` in the code. If using a different model, specify it in the startup command (`-p model:=<robot_model>`).
+> - For moveit_test, the default robot model is set to `zu3` in the code. If using a different model, specify it in the startup command (`-p model:=<robot_model>`).
 
-<figure id="figure-4-22">
-  <img src="images/Figure 4-22: MoveIt Test Executable.png" alt="MoveIt Test Executable">
+<figure id="figure-4-25">
+  <img src="images/Figure 4-25: MoveIt Test Executable.png" alt="MoveIt Test Executable">
   <figcaption>
-    <p align="center"><strong>Figure 4-22: MoveIt Test Executable Command Output</strong></p>
+    <p align="center"><strong>Figure 4-25: MoveIt Test Executable Command Output</strong></p>
   </figcaption>   
 </figure>
 
-<figure id="figure-4-23">
-  <img src="images/Figure 4-23: MoveIt Test Real Robot Execution.png" alt="MoveIt Test Real Robot Execution">
+<figure id="figure-4-26">
+  <img src="images/Figure 4-26: MoveIt Test Real Robot Execution.png" alt="MoveIt Test Real Robot Execution">
   <figcaption>
-    <p align="center"><strong>Figure 4-23: MoveIt Test Real Robot Execution</strong></p>
+    <p align="center"><strong>Figure 4-26: MoveIt Test Real Robot Execution</strong></p>
   </figcaption>   
 </figure>
 
-#### Running in RViz Simulation Mode
-To perform the test in simulation mode without a physical robot, omit the MoveIt server launch and start the RViz demo with the `use_sim` parameter set to `true`. Run the following commands in separate terminals:
+### 4.5.2	Running moveit_test in RViz Simulation Mode
+To perform the test in RViz simulation mode without a physical robot or 3D simulation software tools (like gazebo), omit the MoveIt server launch and start the RViz demo with the `use_rviz_sim` parameter set to `true`.  
+Run the following commands in separate terminals:
 ```bash
-ros2 launch jaka_<robot_model>_moveit_config demo.launch.py use_sim:=true
+ros2 launch jaka_<robot_model>_moveit_config demo.launch.py use_rviz_sim:=true
 ros2 run jaka_planner moveit_test --ros-args -p model:=<robot_model>
-```
+```  
 
-<figure id="figure-4-24">
-  <img src="images/Figure 4-24: MoveIt Test RViz Simulation Mode Execution.png" alt="MoveIt Test RViz Simulation Mode Execution">
+> **Note:** Replace `<robot_model>` with the corresponding JAKA robot model.    
+
+<figure id="figure-4-27">
+  <img src="images/Figure 4-27: MoveIt Test RViz Simulation Mode Execution.png" alt="MoveIt Test RViz Simulation Mode Execution">
   <figcaption>
-    <p align="center"><strong>Figure 4-24: MoveIt Test RViz Simulation Mode Execution</strong></p>
+    <p align="center"><strong>Figure 4-27: MoveIt Test RViz Simulation Mode Execution</strong></p>
+  </figcaption>   
+</figure>
+
+### 4.5.3	Running moveit_test with Gazebo Simulation
+To perform the test with gazebo simulation without a physical JAKA robot, omit the MoveIt server launch and launch gazebo or demo gazebo with RViz.  
+
+**1) Running moveit_test on Independent Gazebo Simulation:**  
+Run the following commands in separate terminals:  
+```bash
+ros2 launch jaka_<robot_model>_moveit_config gazebo.launch.py
+ros2 run jaka_planner moveit_test --ros-args -p model:=<robot_model>
+```  
+
+> **Note:** Replace `<robot_model>` with the corresponding JAKA robot model.
+
+<figure id="figure-4-28">
+  <img src="images/Figure 4-28: MoveIt Test Independent Gazebo Execution.png" alt="MoveIt Test Independent Gazebo Execution" width="1200">
+  <figcaption>
+    <p align="center"><strong>Figure 4-28: MoveIt Test Independent Gazebo Execution</strong></p>
+  </figcaption>   
+</figure>
+
+**2) Running moveit_test on Demo Gazebo Simulation with RViz:**  
+Run the following commands in separate terminals:  
+```bash
+ros2 launch jaka_<robot_model>_moveit_config gazebo.launch.py
+ros2 run jaka_planner moveit_test --ros-args -p model:=<robot_model>
+```  
+
+> **Note:** Replace `<robot_model>` with the corresponding JAKA robot model.  
+
+<figure id="figure-4-29">
+  <img src="images/Figure 4-29: MoveIt Test RViz for Demo Gazebo Execution.png" alt="MoveIt Test RViz for Demo Gazebo Execution">
+  <figcaption>
+    <p align="center"><strong>Figure 4-29: MoveIt Test RViz for Demo Gazebo Execution</strong></p>
+  </figcaption>   
+</figure>
+
+<figure id="figure-4-30">
+  <img src="images/Figure 4-30: MoveIt Test Demo Gazebo with RViz Execution.png" alt="MoveIt Test Demo Gazebo with RViz Execution" width="1200">
+  <figcaption>
+    <p align="center"><strong>Figure 4-30: MoveIt Test Demo Gazebo with RViz Execution</strong></p>
   </figcaption>   
 </figure>

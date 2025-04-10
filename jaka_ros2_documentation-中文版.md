@@ -14,9 +14,11 @@
 本文件提供了安装和配置 **JAKA ROS 2 软件包** 的指南，并包含针对 **仿真** 和 **真实机器人操作** 的逐步教程。  
 
 本手册适用于熟悉基本 **ROS 2 概念**、并希望将 JAKA 机器人集成到其应用中的开发者。
+
 #### 范围 
 ##### JAKA 机器人型号  
-当前版本的 **JAKA ROS 2 软件包** 官方支持以下协作机器人型号：`JAKA Zu 3`、`JAKA Zu 7`、`JAKA Zu 12`、`JAKA A 12`、`JAKA S 5` 和 `JAKA MiniCobo`。
+当前版本的 **JAKA ROS 2 软件包** 支持所有官方发布的 JAKA 六自由度协作机器人型号，包括 `JAKA A 系列`、`JAKA C 系列`、`JAKA Pro 系列`、`JAKA S 系列`、`JAKA Zu 系列` 和 `JAKA MiniCobo`。
+
 
 本手册中的所有配置文件、驱动程序和教程均适用于这些型号。  
 
@@ -25,10 +27,8 @@
 - **RViz 可视化与仿真**：  
   - 实时可视化机器人模型、关节状态和规划轨迹。  
   - 虽然 RViz 主要是一个可视化工具，但本软件包提供了一个基本的 **类仿真环境**，用于预览规划的运动并与机器人的状态交互。  
+- **Gazebo 仿真环境**：完整的机器人动态仿真，包括物理交互和真实世界动态。Gazebo 非常适合测试控制算法以及机器人在逼真的仿真环境中的动态响应。
 - **控制驱动接口**：一个 ROS 2 驱动节点，用于向机器人控制器发送指令并接收状态反馈。  
-
-##### 不包含的功能：  
-本手册 **不涵盖** 在 **Gazebo** 或其他 **3D 物理仿真环境** 中设置或运行 JAKA 机器人的内容。  
 
 ### JAKA ROS 2 软件包结构
 以下两张流程图分别展示了 JAKA ROS 1 和 JAKA ROS 2 软件包的结构。  
@@ -44,7 +44,7 @@
   <img src="images/Figure 1-2: JAKA_ROS2_Package_Structure.png" alt="JAKA ROS2 Package Structure">
 </figure>
 <div align="center">
-  <h4 id="figure-1-2"><strong>图 1-2: JAKA ROS2 软件包结构</strong></h4>
+  <h5 id="figure-1-2"><strong>图 1-2: JAKA ROS2 软件包结构</strong></h5>
 </div>
 
 在从 ROS 1（Catkin）迁移到 ROS 2（Colcon）的过程中，JAKA 机器人软件包的整体布局基本保持不变，但其构建和安装过程有所变化。 
@@ -72,9 +72,9 @@
 为了确保稳定性和性能，该软件包已在特定的软件和硬件配置上进行测试和验证，详情如下。  
 
 #### 支持的 ROS 2 版本
-- 目前，该软件包已在 **Ubuntu 22.04 (Jammy Jellyfish) + ROS 2 Humble** 上正式测试和支持。  
-- 该软件包主要针对 **ROS 2 Humble** 进行测试，但也可能在 **ROS 2 Galactic** 或 **Iron** 上构建和运行。这种情况不保证完全兼容。  
-- 未来版本可能会支持更多**ROS 2**版本。  
+- 目前，该软件包已在 **Ubuntu 22.04 (Jammy Jellyfish) + ROS 2 Humble** 上正式测试和支持。该软件包主要针对 **ROS 2 Humble** 进行测试，但也可能在 **ROS 2 Galactic** 或 **Iron** 上构建和运行。这种情况不保证完全兼容。  
+- 本软件包设计用于与 **Gazebo Ignition Fortress** 配合使用，这是 **ROS 2 Humble** 推荐的仿真环境，提供稳定、高性能的基于物理的仿真。该软件包也已在 **Gazebo Classic** 上进行过测试，尽管功能上可用，但由于其已过时，不推荐在 ROS 2 Humble 上使用。用户可能会遇到不稳定和性能问题。
+- 本软件包的未来版本可能会扩展对新版本 ROS 2 和 Gazebo 的支持，具体取决于它们的正式发布。
 
 #### 支持的控制器版本
 为确保 JAKA ROS 2 软件包的最佳性能和兼容性，我们已经为控制器设定了特定的要求。最低支持的控制器版本为 **1.7.1.46**，该版本提供了基本操作所需的核心功能。为了提高稳定性、增强功能并确保与 ROS 2 和 MoveIt 2 的无缝兼容，推荐的控制器版本为 **1.7.2.16**。我们建议用户升级至推荐版本，因为该版本经过充分测试，并且是当前可用的最新版本。
@@ -234,6 +234,43 @@ source ~/.bashrc
     sudo apt install ros-humble-moveit
     source /opt/ros/humble/setup.bash
 ```
+
+**Gazebo Fortress 安装**
+- 本软件包支持 **Gazebo Fortress** 与 ROS 2 Humble 的仿真。确保通过安装 ros-gz bridge 包正确设置 ROS 2 与 Gazebo Fortress 的集成。
+- 要安装 Gazebo Fortress，请按照官方的 Ignition Gazebo 安装指南进行操作：[Gazebo Fortress 二进制安装](https://gazebosim.org/docs/fortress/install_ubuntu/)。
+
+**(1) 安装必要的工具：**  
+```bash
+sudo apt-get update
+sudo apt-get install lsb-release gnupg
+```  
+
+**(2) 安装 Ignition Fortress：**  
+```bash
+sudo curl https://packages.osrfoundation.org/gazebo.gpg --output /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] http://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null
+sudo apt-get update
+sudo apt-get install ignition-fortress
+```  
+
+**(3) 安装 ROS 2 集成（ros-gz Bridge）：** 允许 ROS 2 Humble 与 Gazebo Fortress 之间的通信。  
+```bash
+sudo apt install -y ros-humble-ros-gz
+```
+
+**(4) 设置环境变量：**  
+```bash
+echo 'source /usr/share/gz/setup.bash' >> ~/.bashrc
+source ~/.bashrc
+```  
+
+**(5) Ubuntu 虚拟机用户的额外配置**  
+如果你在 **虚拟机** 中运行 Gazebo Fortress，可能会遇到 **闪烁网格** 或 **空白渲染窗口** 的问题，这是由于硬件加速有限导致的。为了解决这个问题，可以通过添加以下内容强制使用软件渲染：  
+```bash
+echo 'export LIBGL_ALWAYS_SOFTWARE=true' >> ~/.bashrc
+source ~/.bashrc
+```  
+
 ### 安装 JAKA ROS 2 软件包 
 **(1) 从 GitHub 克隆或下载发布版本**  
 要获取 JAKA ROS 2 软件包，可以选择以下方式：
@@ -617,11 +654,11 @@ ros2 run jaka_driver sdk_test --ros-args -p ip:=<robot_ip>
   </figure>
 
 ### MoveIt 2 教程：规划与执行
-MoveIt 2 是一个强大的运动规划框架，能够为机器人臂提供轨迹规划和执行。虽然当前的 `jaka_ros2` 包不支持 Gazebo 仿真，但它提供了 **基于 RViz 的仿真**。这使得用户在没有物理 JAKA 机器人可用的情况下，能够在 RViz 环境中执行轨迹规划和执行，方便软件测试。
+MoveIt 2 是一个强大的运动规划框架，能够为机器人臂提供轨迹规划和执行。尽管更新后的 `jaka_ros2` 软件包现在支持 **Gazebo 仿真** 进行实时轨迹执行，但仍提供基于 **RViz 的仿真模式**，适用于由于系统限制、硬件约束或其他需求无法使用 Gazebo 的情况。
 
 为了启用该 RViz 仿真模式，需要对默认的 MoveIt 2 包安装中的 `launches.py` 文件进行修改。`jaka_ros2` 包提供了这个文件的调整版本，用户可以将其替换到系统中以实现所需功能。
 
-对 `launches.py` 文件的关键修改是添加了 `use_sim` 参数。当 `use_sim` 设置为 `true` 时，将启用仿真模式。默认情况下，`use_sim` 设置为 `false`。
+对 `launches.py` 文件的关键修改是添加了 `use_rviz_sim` 参数。当 `use_rviz_sim` 设置为 `true` 时，将启用仿真模式。默认情况下，`use_rviz_sim` 设置为 `false`。
 
 #### 设置 MoveIt 2 与 JAKA 机器人（RViz 仿真）
 (1) 确保 **MoveIt 2** 和 `jaka_ros2` 包已正确安装。  
@@ -637,7 +674,7 @@ MoveIt 2 是一个强大的运动规划框架，能够为机器人臂提供轨�
 (3) 使用以下命令在 RViz 仿真模式下启动 MoveIt 2：  
 
 ```bash
-ros2 launch jaka_<robot_model>_moveit_config demo.launch.py use_sim:=true
+ros2 launch jaka_<robot_model>_moveit_config demo.launch.py use_rviz_sim:=true
 ```
 
 > **注意：** 
@@ -647,7 +684,7 @@ ros2 launch jaka_<robot_model>_moveit_config demo.launch.py use_sim:=true
   <figure id="figure-4-14">
     <img src="images/Figure 4-14: Launch Demo Moveit Config in Simulation Mode.png" alt="Launch Demo Moveit Config in Simulation Mode ">
     <figcaption>
-      <p align="center"><strong>图 4-14：在仿真模式下启动 Demo Moveit 配置命令输出</strong></p>
+      <p align="center"><strong>图 4-14：在仿真模式下启动演示 Moveit 配置命令输出</strong></p>
     </figcaption>
   </figure>
 
@@ -663,7 +700,71 @@ ros2 launch jaka_<robot_model>_moveit_config demo.launch.py use_sim:=true
     </figcaption>
   </figure>
 
-这个过程允许用户在没有物理机器人情况下，在仿真 RViz 环境中测试运动规划与执行。
+这种方法允许用户在 RViz 环境中进行轨迹规划和执行，而无需物理 JAKA 机器人或 3D 仿真软件工具，从而确保在各种开发环境中具有更大的灵活性和更广泛的可访问性。
+
+### Gazebo 仿真教程：在 Gazebo 中进行实时轨迹执行  
+Gazebo 是一个强大的仿真环境，提供逼真的物理和可视化效果，适用于机器人应用。在本节中，我们演示如何使用 Gazebo 与 `jaka_ros2` 包结合，在仿真环境中模拟实时轨迹规划和执行。  
+与[上一个节](#moveit-2-教程规划与执行) 中描述的 RViz 仿真类似，本教程使用了自定义的启动文件（即修改过的 `launches.py`）。对 [launches.py](./launches.py) 所做的主要修改是增加了用于独立启动 Gazebo 进行模型可视化的功能，并启动一个集成的 Gazebo 仿真环境与 RViz 配合使用。
+
+#### 使用 JAKA ROS2 设置 Gazebo 仿真
+
+**(1) 确保已安装所需的软件包：**  
+在继续之前，确保 **Gazebo Ignition Fortress** 和 `jaka_ros2` 包已经正确安装。
+
+**(2) 更新自定义启动文件：**  
+将默认的 `launches.py` 文件替换为 `jaka_ros2` 包提供的自定义版本（详情请参阅 [上一个节](#设置-moveit-2-与-jaka-机器人rviz-仿真)）。
+
+**(3) 仅启动 Gazebo 进行模型可视化：**  
+要在 Gazebo 中可视化 JAKA 机器人模型，使用自定义的 `gazebo.launch.py` 文件运行以下命令：  
+   ```bash
+   ros2 launch jaka_<robot_model>_moveit_config gazebo.launch.py
+   ```  
+  <figure id="figure-4-16">
+    <img src="images/Figure 4-16: Launch Gazebo Simulation Independently.png" alt="Independent Gazebo simulation Execution" width="1200">
+    <figcaption>
+      <p align="center"><strong>图 4-16: 独立的 Gazebo 仿真执行</strong></p>
+    </figcaption>
+  </figure>
+
+> **注意：** 替换 `<robot_model>` 为适当的 JAKA 机器人模型名称（例如：zu3、s5、a12、minicobo 等）。
+
+此命令启动 Gazebo Fortress，加载默认世界（一个仅包含地面平面和光源的空白世界），并根据发布的机器人描述生成机器人模型。机器人将出现在 Gazebo GUI 中以供检查。
+
+**(4) 启动 Gazebo 与 RViz 进行轨迹规划与执行：**  
+为了在仿真环境中启用实时轨迹规划与执行，运行 `demo_gazebo.launch.py` 文件，将 Gazebo 与 RViz 集成：  
+   ```bash
+   ros2 launch jaka_<robot_model>_moveit_config demo_gazebo.launch.py
+   ```  
+
+> **注意：** 替换 `<robot_model>` 为适当的 JAKA 机器人模型名称（例如：zu3、s5、a12、minicobo 等）。
+
+#### 在 Gazebo 中演示轨迹执行
+**(1) 启动演示环境：**  
+   按照[上述步](#使用-jaka-ros2-设置-gazebo-仿真)的步骤操作后，机器人模型将同时出现在 **Gazebo** 和 **RViz** 环境中。
+
+**(2) 设置目标姿态：**  
+   - 在 RViz 中通过移动机器人末端执行器上的 **交互标记** 到期望的位置。  
+   - 或者，从 RViz 界面选择一个 **目标状态**。
+
+**(3) 规划并执行轨迹：**  
+   - 在 RViz 中点击 **"Plan & Execute"** 生成并可视化机器人的轨迹。  
+   - 机器人在 **Gazebo** 中应该能够实时执行规划的轨迹。 
+
+  <figure id="figure-4-17">
+    <img src="images/Figure 4-17: RViz for Demo Gazebo Simulation Execution.png" alt="RViz for Demo Gazebo Simulation Execution">
+    <figcaption>
+      <p align="center"><strong>图 4-17： 演示 RViz  为 Gazebo 仿真执行</strong></p>
+    </figcaption>
+  </figure>
+
+  <figure id="figure-4-18">
+    <img src="images/Figure 4-18: Demo Gazebo Simulation with RViz Execution.png" alt="Demo Gazebo simulation with RViz Execution" width="1200">
+    <figcaption>
+      <p align="center"><strong>图 4-18： Gazebo 仿真与 RViz 演示执行</strong></p>
+    </figcaption>
+  </figure>
+
+该过程允许用户在 Gazebo 仿真环境中测试运动规划和执行，而无需实际的机器人。
 
 ### 真实机器人教程：控制真实的 JAKA 机器人
 #### 安全预防措施与机器人设置
@@ -709,10 +810,10 @@ ros2 launch jaka_<robot_model>_moveit_config demo.launch.py use_sim:=true
 ros2 launch jaka_planner moveit_server.launch.py robot_ip:=<robot_ip> robot_model:=<robot_model>
 ```
 
-<figure id="figure-4-16">
-  <img src="images/Figure 4-16: Launch MoveIt 2 Server.png" alt="Launch MoveIt 2 Server">
+<figure id="figure-4-19">
+  <img src="images/Figure 4-19: Launch MoveIt 2 Server.png" alt="Launch MoveIt 2 Server">
   <figcaption>
-    <p align="center"><strong>图 4-16：启动 MoveIt 2 服务器命令输出</strong></p>
+    <p align="center"><strong>图 4-19：启动 MoveIt 2 服务器命令输出</strong></p>
   </figcaption>    
 </figure>
 
@@ -721,31 +822,31 @@ ros2 launch jaka_planner moveit_server.launch.py robot_ip:=<robot_ip> robot_mode
 ```bash
 ros2 launch jaka_<robot_model>_moveit_config demo.launch.py
 ```
-<figure id="figure-4-17">
-  <img src="images/Figure 4-17: Launch Demo Moveit Config.png" alt="Launch Demo Moveit Config">
+<figure id="figure-4-20">
+  <img src="images/Figure 4-20: Launch Demo Moveit Config.png" alt="Launch Demo Moveit Config">
   <figcaption>
-    <p align="center"><strong>图 4-17：启动示例 Moveit 配置命令输出</strong></p>
+    <p align="center"><strong>图 4-20：启动示例 Moveit 配置命令输出</strong></p>
   </figcaption> 
 </figure>
 
 启动后，RViz 界面将打开，显示机器人模型。可视化应反映物理机器人的当前实际位置和方向。
 
-<figure id="figure-4-18">
-  <img src="images/Figure 4-18: RViz Real Robot Vizualization.png" alt="RViz Real Robot Vizualization">
+<figure id="figure-4-21">
+  <img src="images/Figure 4-21: RViz Real Robot Vizualization.png" alt="RViz Real Robot Vizualization">
   <figcaption>
-    <p align="center"><strong>图 4-18：RViz 实际机器人可视化</strong></p>
+    <p align="center"><strong>图 4-21：RViz 实际机器人可视化</strong></p>
   </figcaption>   
 </figure>
 
-<figure id="figure-4-19">
-  <img src="images/Figure 4-19: JAKA App Real Robot Vizualization.png" alt="JAKA App Real Robot Vizualization">
+<figure id="figure-4-22">
+  <img src="images/Figure 4-22: JAKA App Real Robot Vizualization.png" alt="JAKA App Real Robot Vizualization">
   <figcaption>
-    <p align="center"><strong>图 4-19：JAKA 应用程序实际机器人可视化</strong></p>
+    <p align="center"><strong>图 4-22：JAKA 应用程序实际机器人可视化</strong></p>
   </figcaption> 
 </figure>
 
 > **注意：** 
-**use_sim** 参数的默认值为 **false**，因此在使用 MoveIt 2 和 RViz 控制真实机器人时，无需显式指定 `use_sim:=false`，除非您希望确保清晰。
+**use_rviz_sim** 参数的默认值为 **false**，因此在使用 MoveIt 2 和 RViz 控制真实机器人时，无需显式指定 `use_rviz_sim:=false`，除非您希望确保清晰。
 
 
 #### 在 RViz 中使用真实机器人进行轨迹规划和执行
@@ -766,31 +867,30 @@ ros2 launch jaka_<robot_model>_moveit_config demo.launch.py
 - 点击 **"Plan"** 在 RViz 中生成并可视化轨迹，然后再执行。
 - 如果轨迹是 **安全且可行的**，点击 **"Execute"** 将运动命令发送给机器人。
 
-<figure id="figure-4-20">
-  <img src="images/Figure 4-20: RViz Real Robot Trajectory Planning and Execution.png" alt="RViz Real Robot Trajectory Planning and Execution">
+<figure id="figure-4-23">
+  <img src="images/Figure 4-23: RViz Real Robot Trajectory Planning and Execution.png" alt="RViz Real Robot Trajectory Planning and Execution">
   <figcaption>
-    <p align="center"><strong>图 4-20：RViz 真实机器人轨迹规划和执行</strong></p>
+    <p align="center"><strong>图 4-23：RViz 真实机器人轨迹规划和执行</strong></p>
   </figcaption>   
 </figure>
 
-<figure id="figure-4-21">
-  <img src="images/Figure 4-21: JAKA App Real Robot Trajectory Execution.png" alt="JAKA App Real Robot Trajectory Execution">
+<figure id="figure-4-24">
+  <img src="images/Figure 4-24: JAKA App Real Robot Trajectory Execution.png" alt="JAKA App Real Robot Trajectory Execution">
   <figcaption>
-    <p align="center"><strong>图 4-21：JAKA 应用程序真实机器人轨迹执行</strong></p>
+    <p align="center"><strong>图 4-24：JAKA 应用程序真实机器人轨迹执行</strong></p>
   </figcaption>   
 </figure>
 
-#### 运行 `moveit_test` 进行基本运动测试
-`moveit_test` 可执行文件为用户提供了一种简单的方式，测试 MoveIt 2 在 JAKA 机器人上的运动规划和执行。它作为新用户的初步验证步骤，展示 JAKA ROS 2 包如何与 JAKA 机器人交互和控制。此测试可以在真实机器人或 RViz 仿真模式下进行。
+### 运行 `moveit_test` 进行基本运动测试
+`moveit_test` 可执行文件为用户提供了一种简单的方式，测试 MoveIt 2 在 JAKA 机器人上的运动规划和执行。它作为新用户的初步验证步骤，展示 JAKA ROS 2 包如何与 JAKA 机器人交互和控制。此测试可以在真实机器人、RViz 仿真模式或 Gazebo 仿真环境下进行。
 
 ##### `moveit_test` 的目的
 - 为用户提供一个简单的起点，用于验证 MoveIt 2 的运动控制。
 - 帮助测试 JAKA ROS 2 包与 JAKA 机器人之间的通信。
 - 允许用户使用预定义的关节空间运动序列验证机器人的运动规划。
 
-##### 启动方法
-在执行 `moveit_test` 之前，确保 MoveIt 服务器正在运行。
-
+#### 使用真实机器人运行 moveit_test
+要使用真实机器人进行测试，请确保在执行 `moveit_test` 之前已启动 MoveIt 服务器。  
 在不同的终端中运行以下命令：
 
 ```bash
@@ -800,37 +900,83 @@ ros2 run jaka_planner moveit_test --ros-args -p model:=<robot_model>
 ```
 
 > **注意：**  
+> - 将 `<robot_ip>` 替换为机器人实际的 IP 地址。
 > - 将 `<robot_model>` 替换为相应的 JAKA 机器人型号。  
-> - 代码中默认的机器人型号设置为 `zu3`。如果使用不同型号，请在启动命令中指定它（`-p model:=<robot_model>`）。
+> - 对于 `moveit_test`，代码中默认的机器人型号设置为 `zu3`。如果使用不同型号，请在启动命令中指定它（`-p model:=<robot_model>`）。
 
 
-<figure id="figure-4-22">
-  <img src="images/Figure 4-22: MoveIt Test Executable.png" alt="MoveIt Test Executable">
+<figure id="figure-4-25">
+  <img src="images/Figure 4-25: MoveIt Test Executable.png" alt="MoveIt Test Executable">
   <figcaption>
-    <p align="center"><strong>图 4-22：MoveIt 测试可执行文件命令输出</strong></p>
+    <p align="center"><strong>图 4-25：MoveIt 测试可执行文件命令输出</strong></p>
   </figcaption>   
 </figure>
 
-<figure id="figure-4-23">
-  <img src="images/Figure 4-23: MoveIt Test Real Robot Execution.png" alt="MoveIt Test Real Robot Execution">
+<figure id="figure-4-26">
+  <img src="images/Figure 4-26: MoveIt Test Real Robot Execution.png" alt="MoveIt Test Real Robot Execution">
   <figcaption>
-    <p align="center"><strong>图 4-23：MoveIt 测试真实机器人执行</strong></p>
+    <p align="center"><strong>图 4-26：MoveIt 测试真实机器人执行</strong></p>
   </figcaption>   
 </figure>
 
-##### 在 RViz 仿真模式下运行
-为了在没有物理机器人的情况下执行测试，请省略 MoveIt 服务器启动，并将 `use_sim` 参数设置为 `true` 启动 RViz 演示。
-
+#### 在 RViz 仿真模式下运行 moveit_test
+要在 RViz 模拟模式下进行测试（无需实体机器人或三维仿真软件如 Gazebo），请省略 MoveIt 服务器启动，并将 `use_rviz_sim` 参数设置为 `true` 启动 RViz 演示。  
 在不同的终端中运行以下命令：
 
 ```bash
-ros2 launch jaka_<robot_model>_moveit_config demo.launch.py use_sim:=true
+ros2 launch jaka_<robot_model>_moveit_config demo.launch.py use_rviz_sim:=true
 ros2 run jaka_planner moveit_test --ros-args -p model:=<robot_model>
-```
+```  
 
-<figure id="figure-4-24">
-  <img src="images/Figure 4-24: MoveIt Test RViz Simulation Mode Execution.png" alt="MoveIt Test RViz Simulation Mode Execution">
+> **注意：** 将 `<robot_model>` 替换为相应的 JAKA 机器人型号。  
+
+<figure id="figure-4-27">
+  <img src="images/Figure 4-27: MoveIt Test RViz Simulation Mode Execution.png" alt="MoveIt Test RViz Simulation Mode Execution">
   <figcaption>
-    <p align="center"><strong>图 4-24：MoveIt 测试 RViz 仿真模式执行</strong></p>
+    <p align="center"><strong>图 4-27：MoveIt 测试 RViz 仿真模式执行</strong></p>
+  </figcaption>   
+</figure>  
+
+#### 在 Gazebo 模拟下运行 moveit_test  
+要在没有实际 JAKA 机器人的情况下使用 Gazebo 模拟执行测试，请省略 MoveIt 服务器启动，并将启动 Gazebo 或带有 RViz 的 Gazebo 演示。
+
+**(1) 在独立的 Gazebo 模拟中运行 moveit_test：**  
+在不同的终端中运行以下命令：
+
+```bash
+ros2 launch jaka_<robot_model>_moveit_config gazebo.launch.py use_rviz_sim:=true
+ros2 run jaka_planner moveit_test --ros-args -p model:=<robot_model>
+```  
+
+> **注意：** 将 `<robot_model>` 替换为相应的 JAKA 机器人型号。  
+
+<figure id="figure-4-28">
+  <img src="images/Figure 4-28: MoveIt Test Independent Gazebo Execution.png" alt="MoveIt Test Independent Gazebo Execution" width="1200">
+  <figcaption>
+    <p align="center"><strong>Figure 4-28: MoveIt 测试独立的 Gazebo 仿真执行</strong></p>
+  </figcaption>   
+</figure>
+
+**(2) 在带有 RViz 的 Gazebo 演示模拟中运行 moveit_test：**  
+在不同的终端中运行以下命令：
+
+```bash
+ros2 launch jaka_<robot_model>_moveit_config demo_gazebo.launch.py use_rviz_sim:=true
+ros2 run jaka_planner moveit_test --ros-args -p model:=<robot_model>
+```  
+
+> **注意：** 将 `<robot_model>` 替换为相应的 JAKA 机器人型号。  
+
+<figure id="figure-4-29">
+  <img src="images/Figure 4-29: MoveIt Test RViz for Demo Gazebo Execution.png" alt="MoveIt Test RViz for Demo Gazebo Execution">
+  <figcaption>
+    <p align="center"><strong>Figure 4-29: MoveIt 测试演示 RViz 为 Gazebo 仿真执行</strong></p>
+  </figcaption>   
+</figure>
+
+<figure id="figure-4-30">
+  <img src="images/Figure 4-30: MoveIt Test Demo Gazebo with RViz Execution.png" alt="MoveIt Test Demo Gazebo with RViz Execution" width="1200">
+  <figcaption>
+    <p align="center"><strong>Figure 4-30: MoveIt 测试带有 RViz 的 Gazebo 演示模拟执行</strong></p>
   </figcaption>   
 </figure>

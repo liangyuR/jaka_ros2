@@ -1,7 +1,7 @@
 # This config file is used by ros2_control
 controller_manager:
   ros__parameters:
-    update_rate: 100  # Hz
+    update_rate: 1000  # Hz
 
     jaka_zu7_controller:
       type: joint_trajectory_controller/JointTrajectoryController
@@ -9,7 +9,7 @@ controller_manager:
 
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
-
+      
 jaka_zu7_controller:
   ros__parameters:
     joints:

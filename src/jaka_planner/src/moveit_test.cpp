@@ -17,10 +17,17 @@
 
 using namespace std;
 
+void sigintHandler(int /*sig*/) {
+    rclcpp::shutdown();
+}
+
 int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
-    auto node = rclcpp::Node::make_shared("jaka_planner");
+    rclcpp::NodeOptions options;
+    options.parameter_overrides({rclcpp::Parameter("use_sim_time", true)});
+    signal(SIGINT, sigintHandler);
+    auto node = rclcpp::Node::make_shared("jaka_planner", options);
 
     // Declare the parameter for robot model with a default value of "zu3"
     string model = node->declare_parameter<string>("model", "zu3");

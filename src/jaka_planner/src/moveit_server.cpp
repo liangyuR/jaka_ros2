@@ -107,10 +107,7 @@ void goalCb(const shared_ptr<rclcpp_action::ServerGoalHandle<control_msgs::actio
 
         // step_num matches old ROS1 logic: step_num = dt / 0.008
         int step_num = static_cast<int>(dt / 0.008f);
-        if (step_num < 1) {
-            // If dt is very small, ensure at least 1 step 
-            step_num = 1;
-        }
+        step_num = max(step_num, 1);
 
         int sdk_res = robot.servo_j(&joint_pose, MoveMode::ABS, step_num);
         if (sdk_res != 0)
@@ -125,17 +122,17 @@ void goalCb(const shared_ptr<rclcpp_action::ServerGoalHandle<control_msgs::actio
                     joint_pose.jVal[3], joint_pose.jVal[4], joint_pose.jVal[5],
                     dt, step_num);
 
-        // Check if the action was canceled in the middle
-        if (goal_handle->is_canceling())
-        {
-            // stop motion
-            robot.motion_abort();
-            robot.servo_move_enable(false);
-            RCLCPP_INFO(rclcpp::get_logger("goalCb"), "Servo Mode Disable, motion canceled");
-            auto result = make_shared<control_msgs::action::FollowJointTrajectory::Result>();
-            goal_handle->canceled(result);
-            return;
-        }
+        // // Check if the action was canceled in the middle
+        // if (goal_handle->is_canceling())
+        // {
+        //     // stop motion
+        //     robot.motion_abort();
+        //     robot.servo_move_enable(false);
+        //     RCLCPP_INFO(rclcpp::get_logger("goalCb"), "Servo Mode Disable, motion canceled");
+        //     auto result = make_shared<control_msgs::action::FollowJointTrajectory::Result>();
+        //     goal_handle->canceled(result);
+        //     return;
+        // }
     }
 
     // Wait until the robot is actually at the final position, or until canceled
@@ -144,36 +141,36 @@ void goalCb(const shared_ptr<rclcpp_action::ServerGoalHandle<control_msgs::actio
         if (jointStates(joint_pose))
         {
             robot.servo_move_enable(false);
-            RCLCPP_INFO(rclcpp::get_logger("goalCb"), "Servo Mode Disable");
+            RCLCPP_INFO(rclcpp::get_logger("goalCb"), "Servo Mode Disable: Target Reached");
             RCLCPP_INFO(rclcpp::get_logger("goalCb"), 
                         "==============Motion stops or reaches the target position==============");
             break;
         }
 
-        if (goal_handle->is_canceling())
-        {
-            robot.motion_abort();
-            robot.servo_move_enable(false);
-            RCLCPP_INFO(rclcpp::get_logger("goalCb"), "Servo Mode Disable");
-            RCLCPP_INFO(rclcpp::get_logger("goalCb"), 
-                        "==============Motion stops or was canceled==============");
-            auto result = make_shared<control_msgs::action::FollowJointTrajectory::Result>();
-            goal_handle->canceled(result);
-            return;
-        }
+        // if (goal_handle->is_canceling())
+        // {
+        //     robot.motion_abort();
+        //     robot.servo_move_enable(false);
+        //     RCLCPP_INFO(rclcpp::get_logger("goalCb"), "Servo Mode Disable");
+        //     RCLCPP_INFO(rclcpp::get_logger("goalCb"), 
+        //                 "==============Motion stops or was canceled==============");
+        //     auto result = make_shared<control_msgs::action::FollowJointTrajectory::Result>();
+        //     goal_handle->canceled(result);
+        //     return;
+        // }
 
         rclcpp::sleep_for(chrono::milliseconds(500));
     }
 
-    // After processing all points, check if the goal was canceled
-    if (goal_handle->is_canceling()) {
-        robot.motion_abort();
-        robot.servo_move_enable(false);
-        RCLCPP_INFO(rclcpp::get_logger("goalCb"), "Servo Mode Disabled, Motion Canceled");
-        auto result = make_shared<control_msgs::action::FollowJointTrajectory::Result>();
-        goal_handle->canceled(result);
-        return;
-    }
+    // // After processing all points, check if the goal was canceled
+    // if (goal_handle->is_canceling()) {
+    //     robot.motion_abort();
+    //     robot.servo_move_enable(false);
+    //     RCLCPP_INFO(rclcpp::get_logger("goalCb"), "Servo Mode Disabled, Motion Canceled");
+    //     auto result = make_shared<control_msgs::action::FollowJointTrajectory::Result>();
+    //     goal_handle->canceled(result);
+    //     return;
+    // }
 
     // If we get here, it succeeded
     auto result = make_shared<control_msgs::action::FollowJointTrajectory::Result>();
@@ -200,10 +197,15 @@ void joint_states_callback(rclcpp::Publisher<sensor_msgs::msg::JointState>::Shar
     joint_states_pub->publish(joint_msg);
 }
 
+void sigintHandler(int /*sig*/) {
+    rclcpp::shutdown();
+}
+
 int main(int argc, char *argv[])
 {
     setlocale(LC_ALL, "");
     rclcpp::init(argc, argv);
+    signal(SIGINT, sigintHandler);
     auto node = rclcpp::Node::make_shared("moveit_server");
 
     // Read parameters
@@ -244,12 +246,13 @@ int main(int argc, char *argv[])
             (void)goal; // Avoid unused parameter warning
             return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
         },
-        // Cancel callback
-        [](const shared_ptr<rclcpp_action::ServerGoalHandle<control_msgs::action::FollowJointTrajectory>> goal_handle) {
-            (void)goal_handle;  // Avoid unused parameter warning
-            RCLCPP_INFO(rclcpp::get_logger("moveit_server"), "Received cancel request");
-            return rclcpp_action::CancelResponse::ACCEPT;
-        },
+        // // Cancel callback
+        // [](const shared_ptr<rclcpp_action::ServerGoalHandle<control_msgs::action::FollowJointTrajectory>> goal_handle) {
+        //     (void)goal_handle;  // Avoid unused parameter warning
+        //     RCLCPP_INFO(rclcpp::get_logger("moveit_server"), "Received cancel request");
+        //     return rclcpp_action::CancelResponse::ACCEPT;
+        // },
+        nullptr,  // Cancel callback removed
         // Execute callback
         [](const shared_ptr<rclcpp_action::ServerGoalHandle<control_msgs::action::FollowJointTrajectory>> goal_handle) {
             RCLCPP_INFO(rclcpp::get_logger("moveit_server"), "Executing goal");

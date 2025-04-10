@@ -3,7 +3,7 @@
      Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
      For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
 <robot
-  name="Pro 7.SLDASM">
+  name="jaka_pro7">
 <link name="world" />
   <link
     name="base_link">
@@ -459,8 +459,10 @@
             <mechanicalReduction>1</mechanicalReduction>
         </actuator>
     </transmission>
-<gazebo>
-        <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+    <gazebo>
+        <!-- <plugin name="gazebo_ros2_control" filename="libgazebo_ros2_control.so"> -->
+        <plugin name="ign_ros2_control::IgnitionROS2ControlPlugin" filename="libign_ros2_control-system.so">
+            <parameters>$(find jaka_pro7_moveit_config)/config/ros2_controllers.yaml</parameters>
             <robotNamespace>/</robotNamespace>
         </plugin>
     </gazebo>

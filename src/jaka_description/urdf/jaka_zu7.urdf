@@ -1,8 +1,9 @@
-<!-- <?xml version="1.0" encoding="utf-8" ?> -->
+<?xml version="1.0" encoding="utf-8"?>
 <!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
      Commit Version: 1.5.1-0-g916b5db  Build Version: 1.5.7152.31018
      For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
 <robot name="jaka_zu7">
+
     <!-- LINK -->
     <link name="world" />
 
@@ -290,13 +291,10 @@
         </actuator>
     </transmission>
     <gazebo>
-        <plugin name="gazebo_ros2_control" filename="libgazebo_ros2_control.so">
+        <!-- <plugin name="gazebo_ros2_control" filename="libgazebo_ros2_control.so"> -->
+        <plugin name="ign_ros2_control::IgnitionROS2ControlPlugin" filename="libign_ros2_control-system.so">
+            <parameters>$(find jaka_zu7_moveit_config)/config/ros2_controllers.yaml</parameters>
             <robotNamespace>/</robotNamespace>
-            <ros2_control>
-                <parameters>package://jaka_zu7_moveit_config/config/ros2_controllers.yaml</parameters>
-            </ros2_control>
-            <!-- <robotSimType>gazebo_ros_control/DefaultRobotHWSim</robotSimType>
-            <legacyModeNS>true</legacyModeNS> -->
         </plugin>
     </gazebo>
 </robot>

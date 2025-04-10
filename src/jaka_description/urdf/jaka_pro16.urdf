@@ -470,7 +470,9 @@
     </actuator>
   </transmission>
   <gazebo>
-    <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+    <!-- <plugin name="gazebo_ros2_control" filename="libgazebo_ros2_control.so"> -->
+    <plugin name="ign_ros2_control::IgnitionROS2ControlPlugin" filename="libign_ros2_control-system.so">
+      <parameters>$(find jaka_pro16_moveit_config)/config/ros2_controllers.yaml</parameters>
       <robotNamespace>/</robotNamespace>
     </plugin>
   </gazebo>

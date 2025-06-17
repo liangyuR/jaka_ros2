@@ -258,10 +258,11 @@ sudo apt-get install ignition-fortress
 sudo apt install -y ros-humble-ros-gz
 ```
 
-**(4) 设置环境变量：**  
+**(4) 安装 ign_ros2_control 软件包：** 提供 **IgnitionSystem** 插件。  
 ```bash
-echo 'source /usr/share/gz/setup.bash' >> ~/.bashrc
-source ~/.bashrc
+sudo apt update
+sudo apt upgrade
+sudo apt install ros-humble-ign-ros2-control
 ```  
 
 **(5) Ubuntu 虚拟机用户的额外配置**  
@@ -294,7 +295,7 @@ b. 使用 SSH 克隆：
 获取软件包后，进入工作空间并使用 colcon 进行构建：
 
 ```bash
-cd <path-to-where-the-repository-is-cloned-or-extracted>/jaka_ros2/src
+cd <path-to-where-the-repository-is-cloned-or-extracted>/jaka_ros2
 colcon build --symlink-install
 ```
 

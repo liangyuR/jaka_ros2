@@ -249,7 +249,9 @@ source ~/.bashrc
 
 ### 2.1.3 Additional dependencies  
 
-**MoveIt2 Installation**
+#### 2.1.3.1 MoveIt 2 Installation
+
+**1) Basic Installation**
 - MoveIt 2 is required for motion planning and execution. Ensure MoveIt 2 (**version 2.2+** recommended) is installed before using the **JAKA ROS 2 package**.  
 - Follow the official MoveIt 2 documentation for installation: Binary installation (official Debian package via apt): [MoveIt 2 Binary Installation](https://moveit.ai/install-moveit2/binary/).  
 
@@ -258,8 +260,67 @@ source ~/.bashrc
     sudo apt install ros-humble-moveit
     source /opt/ros/humble/setup.bash
     ```
+  > **Note:**  This may pull in many message, planning, and visualization packages automatically. However, in some cases certain plugins or message packages may not be present or may change over time. It is therefore recommended to manually install (or check) the key MoveIt 2 and ROS 2 control packages as listed below to ensure completeness.
 
-**Gazebo Fortress Installation**
+**2) MoveIt 2 Core and Message Packages**  
+- Install **MoveIt 2 messages**, **control messages**, **planning interface**, and **utils** to ensure you have the necessary message types and planning APIs.
+  - `ros-humble-moveit-msgs`: standard message types for MoveIt 2.
+  - `ros-humble-control-msgs`: control-related message definitions.
+  - `ros-humble-moveit-ros-planning-interface`: C++ planning interface for MoveIt 2.
+  - `ros-humble-moveit-configs-utils`: utilities for MoveIt configuration.
+  
+  Below are steps to install these dependencies via apt.
+
+    ```bash
+    sudo apt update
+    sudo apt install -y \
+      ros-humble-moveit-msgs \
+      ros-humble-control-msgs \
+      ros-humble-moveit-ros-planning-interface \
+      ros-humble-moveit-configs-utils
+    ```
+
+**3) ROS 2 Control and Controller Manager**  
+- The **JAKA ROS 2 package** relies on **ROS 2 control** to interface with hardware or simulation controllers. Install: 
+  - `ros-humble-ros2-control`: core ROS 2 control infrastructure.
+  - `ros-humble-controller-manager`: lifecycle and management of controllers
+  - `ros-humble-ros2-controllers`: a set of common controller implementations (e.g., joint state broadcaster).
+
+  Below are steps to install these dependencies via apt. 
+
+    ```bash
+    sudo apt update
+    sudo apt install -y \
+      ros-humble-ros2-control \
+      ros-humble-controller-manager \
+      ros-humble-ros2-controllers
+    ```
+
+**4) MoveIt 2 Visualization & Control Interfaces**  
+- Install **visualization plugins** for RViz, **MoveIt control interface integration**, and **visual tools** for debugging:  
+  - `ros-humble-moveit-ros-visualization`: RViz plugins and visualization layers for MoveIt 2 (planning scene display, etc.).
+  - `ros-humble-moveit-ros-control-interface`: integration between MoveIt 2 and ROS 2 control for executing planned trajectories on controllers.
+  - `ros-humble-moveit-visual-tools`: helper libraries for publishing markers, interactive markers, and other runtime visual debugging aids.
+
+  Below are steps to install these dependencies via apt. 
+
+    ```bash
+    sudo apt update
+    sudo apt install -y \
+      ros-humble-moveit-ros-visualization \
+      ros-humble-moveit-ros-control-interface \
+      ros-humble-moveit-visual-tools
+    ```
+**5) MoveIt 2 Planners (OMPL)**
+- The default **sampling-based planners** in MoveIt rely on **OMPL**. Install:  
+
+    ```bash
+    sudo apt update
+    sudo apt install -y ros-humble-moveit-planners-ompl
+    ```
+
+#### 2.1.3.2 Gazebo Fortress Installation
+
 -	This package supports **Gazebo Fortress** for simulation with ROS 2 Humble. Ensure that ROS 2 integration with Gazebo Fortress is properly set up by installing the ros-gz bridge package.
 -	To install Gazebo Fortress, follow the official Ignition Gazebo installation guide: [Gazebo Fortress Binary Installation](https://gazebosim.org/docs/fortress/install_ubuntu/).
 
@@ -277,18 +338,19 @@ sudo apt-get update
 sudo apt-get install ignition-fortress
 ```  
 
-**3) Install ROS 2 integration (ros-gz Bridge):** to allow communication between ROS 2 Humble and Gazebo Fortress.
+**3) Install ROS 2 integration (ros-gz Bridge):** to allow communication between ROS 2 Humble and Gazebo Fortress.  
 ```bash
 sudo apt install -y ros-humble-ros-gz
 ```  
 
-**4) Set up environment variables:**
+**4) Install the ign_ros2_control package:** provides the **IgnitionSystem** plugin.  
 ```bash
-echo 'source /usr/share/gz/setup.bash' >> ~/.bashrc
-source ~/.bashrc
+sudo apt update
+sudo apt upgrade
+sudo apt install ros-humble-ign-ros2-control
 ```  
 
-**5) Additional Configuration for Ubuntu Virtual Machine Users**
+**5) Additional Configuration for Ubuntu Virtual Machine Users**  
 If you are running Gazebo Fortress inside a **virtual machine**, you may experience **flickering grids** or **a blank rendering window** due to limited hardware acceleration. To fix this, force software rendering by adding:  
 ```bash
 echo 'export LIBGL_ALWAYS_SOFTWARE=true' >> ~/.bashrc
@@ -315,7 +377,7 @@ To obtain the **JAKA ROS 2 package**, you can either:
 **2) Building with colcon**  
 Once the package is obtained, navigate to the workspace and build it using colcon:  
 ```bash
-cd <path-to-where-the-repository-is-cloned-or-extracted>/jaka_ros2/src
+cd <path-to-where-the-repository-is-cloned-or-extracted>/jaka_ros2
 colcon build --symlink-install
 ```
 

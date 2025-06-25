@@ -531,6 +531,39 @@ def generate_gazebo_launch(moveit_config, launch_package_path=None):
     )
     ld.add_action(spawn_robot)
 
+    # Run MoveIt! move_group
+    ld.add_action(
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                str(launch_package_path / "launch/move_group.launch.py")
+            ),
+            launch_arguments={"allow_trajectory_execution": "true"}.items(),
+        )
+    )
+
+    # Start the controller manager
+    ld.add_action(
+        Node(
+            package="controller_manager",
+            executable="ros2_control_node",
+            parameters=[
+                moveit_config.robot_description,
+                str(moveit_config.package_path / "config/ros2_controllers.yaml"),
+            ],
+            condition=IfCondition(LaunchConfiguration("use_gazebo")),
+        )
+    )
+
+    # Start controllers
+    ld.add_action(
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                str(launch_package_path / "launch/spawn_controllers.launch.py")
+            ),
+            condition=IfCondition(LaunchConfiguration("use_gazebo")),  # Disable controller manager for real robots
+        )
+    )
+
     return ld
 
 def generate_demo_gazebo_launch(moveit_config, launch_package_path=None):

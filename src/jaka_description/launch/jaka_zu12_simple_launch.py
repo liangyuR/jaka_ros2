@@ -9,7 +9,6 @@ def generate_launch_description():
     # Get the URDF file path
     urdf_file_path = PathJoinSubstitution([FindPackageShare('jaka_description'), 'urdf', 'jaka_zu12.urdf'])
     
-    # Declare launch arguments if needed (e.g., file paths)
     return LaunchDescription([
         # Start the robot_state_publisher node 
         Node(
@@ -17,21 +16,20 @@ def generate_launch_description():
             executable='robot_state_publisher',
             name='robot_state_publisher',
             parameters=[{'robot_description': ParameterValue(Command(['cat ', urdf_file_path]), value_type=str)}],
-            remappings=[('/joint_states', 'robot_jog_command')],
         ),
         
-        # Start the jaka_jog_panel node 
+        # Start joint_state_publisher_gui for interactive control
         Node(
-            package='jaka_jog_panel',
-            executable='jakajogpanel',
-            name='jaka_jog_panel',
+            package='joint_state_publisher_gui',
+            executable='joint_state_publisher_gui',
+            name='joint_state_publisher_gui',
         ),
 
         # Start rviz with the provided configuration file
         Node(
-            package='rviz2',  # ROS 2 uses rviz2 instead of rviz
+            package='rviz2',
             executable='rviz2',
-            name='rviz',
+            name='rviz2',
             arguments=['-d', PathJoinSubstitution([FindPackageShare('jaka_description'), 'config', 'jaka_zu12_urdf.rviz'])],
         ),
-    ])
+    ]) 

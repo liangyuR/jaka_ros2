@@ -30,6 +30,6 @@ def generate_launch_description():
             package='rviz2',
             executable='rviz2',
             name='rviz2',
-            arguments=['-d', PathJoinSubstitution([FindPackageShare('jaka_description'), 'config', 'jaka_zu12_urdf.rviz'])],
+            arguments=['-d', PathJoinSubstitution([FindPackageShare('jaka_description'), 'config', 'jaka_zu12_rviz2.rviz'])],
         ),
-    ]) 
+    ])

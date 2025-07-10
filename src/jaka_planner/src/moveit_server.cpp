@@ -16,7 +16,19 @@
 #include <string>
 #include <map>
 #include <thread>
-using namespace std;
+#include <memory>
+#include <variant>
+#include <chrono>
+
+using std::string;
+using std::map;
+using std::shared_ptr;
+using std::make_shared;
+using std::thread;
+using std::max;
+using std::to_string;
+using std::chrono::milliseconds;
+using std::chrono::seconds;
 
 JAKAZuRobot robot;
 const double PI = 3.1415926;
@@ -159,7 +171,7 @@ void goalCb(const shared_ptr<rclcpp_action::ServerGoalHandle<control_msgs::actio
         //     return;
         // }
 
-        rclcpp::sleep_for(chrono::milliseconds(500));
+        rclcpp::sleep_for(milliseconds(500));
     }
 
     // // After processing all points, check if the goal was canceled
@@ -175,7 +187,7 @@ void goalCb(const shared_ptr<rclcpp_action::ServerGoalHandle<control_msgs::actio
     // If we get here, it succeeded
     auto result = make_shared<control_msgs::action::FollowJointTrajectory::Result>();
     goal_handle->succeed(result);
-    rclcpp::sleep_for(chrono::milliseconds(500));
+    rclcpp::sleep_for(milliseconds(500));
 }
 
 // Publish the robot's joint states to /joint_states (for RViz / MoveIt feedback)
@@ -194,7 +206,7 @@ void joint_states_callback(rclcpp::Publisher<sensor_msgs::msg::JointState>::Shar
         joint_msg.name.push_back("joint_" + to_string(i+1));
     }
     joint_msg.header.stamp = rclcpp::Clock().now();
-    joint_states_pub->publish(joint_msg);
+    joint_states_pub->publish(joint_msg); // NOLINT
 }
 
 void sigintHandler(int /*sig*/) {
@@ -209,10 +221,12 @@ int main(int argc, char *argv[])
     auto node = rclcpp::Node::make_shared("moveit_server");
 
     // Read parameters
-    string default_ip = "10.5.5.100";
-    string default_model = "zu3";
+    string default_ip = "192.168.0.122";
+    string default_model = "zu12";
     string robot_ip = node->declare_parameter("ip", default_ip);
     string robot_model = node->declare_parameter("model", default_model);
+
+    RCLCPP_INFO(rclcpp::get_logger("moveit_server"), "Robot IP: %s, Model: %s", robot_ip.c_str(), robot_model.c_str());
 
     // Connect to robot
     robot.login_in(robot_ip.c_str(), false);
@@ -220,16 +234,16 @@ int main(int argc, char *argv[])
 
     // Turn off servo at startup
     robot.servo_move_enable(false);
-    rclcpp::sleep_for(chrono::milliseconds(500));
+    rclcpp::sleep_for(milliseconds(500));
 
     // Filter param
     robot.servo_move_use_joint_LPF(0.5);
 
     // Power on + enable
     robot.power_on();
-    rclcpp::sleep_for(chrono::seconds(8));
+    rclcpp::sleep_for(seconds(8));
     robot.enable_robot();
-    rclcpp::sleep_for(chrono::seconds(4));
+    rclcpp::sleep_for(seconds(4));
 
     // Publisher for /joint_states
     joint_states_pub = node->create_publisher<sensor_msgs::msg::JointState>("/joint_states", 10);
@@ -240,21 +254,20 @@ int main(int argc, char *argv[])
         "/jaka_" + robot_model + "_controller/follow_joint_trajectory",
         // Goal callback
         [](const rclcpp_action::GoalUUID &uuid,
-           shared_ptr<const control_msgs::action::FollowJointTrajectory::Goal> goal) {
+           std::shared_ptr<const control_msgs::action::FollowJointTrajectory::Goal> goal) {
             RCLCPP_INFO(rclcpp::get_logger("moveit_server"), "Received goal request");
             (void)uuid; // Avoid unused parameter warning
             (void)goal; // Avoid unused parameter warning
             return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
         },
-        // // Cancel callback
-        // [](const shared_ptr<rclcpp_action::ServerGoalHandle<control_msgs::action::FollowJointTrajectory>> goal_handle) {
-        //     (void)goal_handle;  // Avoid unused parameter warning
-        //     RCLCPP_INFO(rclcpp::get_logger("moveit_server"), "Received cancel request");
-        //     return rclcpp_action::CancelResponse::ACCEPT;
-        // },
-        nullptr,  // Cancel callback removed
+        // Cancel callback
+        [](const std::shared_ptr<rclcpp_action::ServerGoalHandle<control_msgs::action::FollowJointTrajectory>> goal_handle) {
+            (void)goal_handle;  // Avoid unused parameter warning
+            RCLCPP_INFO(rclcpp::get_logger("moveit_server"), "Received cancel request");
+            return rclcpp_action::CancelResponse::ACCEPT;
+        },
         // Execute callback
-        [](const shared_ptr<rclcpp_action::ServerGoalHandle<control_msgs::action::FollowJointTrajectory>> goal_handle) {
+        [](const std::shared_ptr<rclcpp_action::ServerGoalHandle<control_msgs::action::FollowJointTrajectory>> goal_handle) {
             RCLCPP_INFO(rclcpp::get_logger("moveit_server"), "Executing goal");
             goalCb(goal_handle); 
         }

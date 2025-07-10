@@ -1,0 +1,27 @@
+{
+    "clangd.path": "clangd",
+    "clangd.arguments": [
+        "--log=verbose",
+        "--pretty",
+        "--all-scopes-completion",
+        "--completion-style=detailed",
+        "--function-arg-placeholders",
+        "--header-insertion=iwyu"
+    ],
+    "clangd.fallbackFlags": [
+        "-std=c++20",
+        "-I/opt/ros/humble/include"
+    ],
+    "C_Cpp.intelliSenseEngine": "Disabled",
+    "C_Cpp.autocomplete": "Disabled",
+    "C_Cpp.errorSquiggles": "Disabled",
+    "editor.semanticHighlighting.enabled": true,
+    "files.associations": {
+        "*.launch": "xml",
+        "*.urdf": "xml",
+        "*.xacro": "xml",
+        "*.sdf": "xml"
+    },
+    "python.defaultInterpreterPath": "/opt/ros/humble/bin/python3",
+    "ros.distro": "humble"
+}

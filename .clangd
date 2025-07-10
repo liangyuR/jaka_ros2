@@ -1,0 +1,23 @@
+CompileFlags:
+  CompilationDatabase: build/
+  Add: [-std=c++20, -I/opt/ros/humble/include]
+
+Index:
+  Background: Build
+
+Diagnostics:
+  ClangTidy:
+    Add: [performance-*, readability-*, modernize-*]
+    Remove: [readability-braces-around-statements, readability-magic-numbers]
+  UnusedIncludes: Strict
+
+Completion:
+  AllScopes: Yes
+
+InlayHints:
+  Enabled: Yes
+  ParameterNames: Yes
+  DeducedTypes: Yes
+
+Hover:
+  ShowAKA: Yes 

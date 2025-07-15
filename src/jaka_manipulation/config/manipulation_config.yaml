@@ -1,0 +1,29 @@
+# JAKA Manipulation 默认配置参数
+
+# 机器人参数
+robot:
+  default_model: "zu12"
+  default_ip: "192.168.1.100"
+  connection_timeout: 10.0
+  
+# 运动规划参数
+planning:
+  planner_id: "RRTConnect"
+  planning_time: 5.0
+  max_velocity_scaling_factor: 0.1
+  max_acceleration_scaling_factor: 0.1
+  
+# 执行参数
+execution:
+  allowed_execution_duration_scaling: 1.2
+  allowed_goal_duration_margin: 0.5
+  
+# 仿真参数
+simulation:
+  joint_state_publisher_rate: 50.0
+  
+# 真实机器人参数
+real_robot:
+  servo_rate: 125.0
+  position_tolerance: 0.01
+  orientation_tolerance: 0.01 

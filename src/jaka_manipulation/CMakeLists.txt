@@ -6,7 +6,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 # 设置C++17标准
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # find dependencies
@@ -16,6 +16,8 @@ find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
 find_package(moveit_visual_tools REQUIRED)
+find_package(moveit_msgs REQUIRED)
+find_package(shape_msgs REQUIRED)
 find_package(jaka_msgs REQUIRED)
 find_package(jaka_planner REQUIRED)
 find_package(std_srvs REQUIRED)
@@ -29,6 +31,8 @@ ament_target_dependencies(manipulation_node
   sensor_msgs
   moveit_ros_planning_interface
   moveit_visual_tools
+  moveit_msgs
+  shape_msgs
   jaka_msgs
   jaka_planner
   std_srvs
@@ -38,6 +42,11 @@ ament_target_dependencies(manipulation_node
 install(TARGETS
   manipulation_node
   DESTINATION lib/${PROJECT_NAME}
+)
+
+# 安装 launch 文件
+install(DIRECTORY launch/
+  DESTINATION share/${PROJECT_NAME}/launch
 )
 
 if(BUILD_TESTING)

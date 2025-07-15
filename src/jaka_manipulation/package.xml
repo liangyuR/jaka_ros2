@@ -14,6 +14,8 @@
   <depend>sensor_msgs</depend>
   <depend>moveit_ros_planning_interface</depend>
   <depend>moveit_visual_tools</depend>
+  <depend>moveit_msgs</depend>
+  <depend>shape_msgs</depend>
   <depend>jaka_msgs</depend>
   <depend>jaka_planner</depend>
   <depend>std_srvs</depend>

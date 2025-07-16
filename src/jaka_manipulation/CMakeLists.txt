@@ -21,9 +21,19 @@ find_package(shape_msgs REQUIRED)
 find_package(jaka_msgs REQUIRED)
 find_package(jaka_planner REQUIRED)
 find_package(std_srvs REQUIRED)
+find_package(nlohmann_json REQUIRED CONFIG)
+find_package(ament_index_cpp REQUIRED)
+
+# 添加include目录
+include_directories(include)
 
 # 添加可执行文件
-add_executable(manipulation_node src/manipulation_node.cpp)
+add_executable(manipulation_node 
+  src/main.cpp
+  src/manipulation_node.cpp
+  src/scene_manager.cpp
+)
+target_link_libraries(manipulation_node nlohmann_json::nlohmann_json)
 
 ament_target_dependencies(manipulation_node
   rclcpp
@@ -36,6 +46,7 @@ ament_target_dependencies(manipulation_node
   jaka_msgs
   jaka_planner
   std_srvs
+  ament_index_cpp
 )
 
 # 安装可执行文件
@@ -44,9 +55,35 @@ install(TARGETS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+# 安装头文件
+install(DIRECTORY include/
+  DESTINATION include
+)
+
 # 安装 launch 文件
 install(DIRECTORY launch/
   DESTINATION share/${PROJECT_NAME}/launch
+)
+
+# 安装 config 文件
+install(DIRECTORY config/
+  DESTINATION share/${PROJECT_NAME}/config
+)
+
+# 安装 scene 目录（确保场景文件目录存在）
+install(DIRECTORY config/scene/
+  DESTINATION share/${PROJECT_NAME}/config/scene
+)
+
+# 安装 scripts 文件
+install(DIRECTORY scripts/
+  DESTINATION share/${PROJECT_NAME}/scripts
+  USE_SOURCE_PERMISSIONS
+)
+
+# 安装 docs 文件
+install(DIRECTORY docs/
+  DESTINATION share/${PROJECT_NAME}/docs
 )
 
 if(BUILD_TESTING)

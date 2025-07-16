@@ -8,7 +8,9 @@ Index:
 Diagnostics:
   ClangTidy:
     Add: [performance-*, readability-*, modernize-*]
-    Remove: [readability-braces-around-statements, readability-magic-numbers]
+    Remove: [readability-braces-around-statements, readability-magic-numbers, modernize-use-trailing-return-type, modernize-use-nodiscard]
+    CheckOptions:
+      readability-function-cognitive-complexity.Threshold: 100
   UnusedIncludes: Strict
 
 Completion:

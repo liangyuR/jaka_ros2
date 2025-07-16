@@ -3,27 +3,78 @@
 <package format="3">
   <name>jaka_manipulation</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="ranliangyu@enneagon.com">dc</maintainer>
-  <license>TODO: License declaration</license>
+  <description>The jaka_manipulation package</description>
 
+  <!-- Maintainer information -->
+  <maintainer email="meddy@todo.todo">meddy</maintainer>
+  
+  <!-- License information -->
+  <license>TODO</license>
+  
+  <!-- Dependencies for ROS2 -->
   <buildtool_depend>ament_cmake</buildtool_depend>
-
-  <depend>rclcpp</depend>
-  <depend>geometry_msgs</depend>
-  <depend>sensor_msgs</depend>
-  <depend>moveit_ros_planning_interface</depend>
-  <depend>moveit_visual_tools</depend>
-  <depend>moveit_msgs</depend>
-  <depend>shape_msgs</depend>
-  <depend>jaka_msgs</depend>
-  <depend>jaka_planner</depend>
-  <depend>std_srvs</depend>
-
+  
+  <!-- Build dependencies -->
+  <build_depend>rclcpp</build_depend>
+  <build_depend>geometry_msgs</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>moveit_ros_planning_interface</build_depend>
+  <build_depend>moveit_visual_tools</build_depend>
+  <build_depend>moveit_msgs</build_depend>
+  <build_depend>shape_msgs</build_depend>
+  <build_depend>jaka_msgs</build_depend>
+  <build_depend>jaka_planner</build_depend>
+  <build_depend>std_srvs</build_depend>
+  <build_depend>tf2_ros</build_depend>
+  <build_depend>tf2_geometry_msgs</build_depend>
+  <build_depend>yaml-cpp</build_depend>
+  <build_depend>ament_index_cpp</build_depend>
+  
+  <!-- Execution dependencies -->
+  <exec_depend>rclcpp</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>moveit_ros_planning_interface</exec_depend>
+  <exec_depend>moveit_visual_tools</exec_depend>
+  <exec_depend>moveit_msgs</exec_depend>
+  <exec_depend>shape_msgs</exec_depend>
+  <exec_depend>jaka_msgs</exec_depend>
+  <exec_depend>jaka_planner</exec_depend>
+  <exec_depend>std_srvs</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>tf2_geometry_msgs</exec_depend>
+  <exec_depend>yaml-cpp</exec_depend>
+  <exec_depend>ament_index_cpp</exec_depend>
+  
+  <!-- MoveIt dependencies -->
+  <exec_depend>moveit_ros_move_group</exec_depend>
+  <exec_depend>moveit_kinematics</exec_depend>
+  <exec_depend>moveit_planners</exec_depend>
+  <exec_depend>moveit_simple_controller_manager</exec_depend>
+  <exec_depend>joint_state_publisher</exec_depend>
+  <exec_depend>joint_state_publisher_gui</exec_depend>
+  <exec_depend>xacro</exec_depend>
+  <exec_depend>controller_manager</exec_depend>
+  <exec_depend>jaka_description</exec_depend>
+  <exec_depend>moveit_configs_utils</exec_depend>
+  <exec_depend>moveit_ros_visualization</exec_depend>
+  <exec_depend>moveit_ros_warehouse</exec_depend>
+  <exec_depend>moveit_setup_assistant</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <exec_depend>rviz_common</exec_depend>
+  <exec_depend>rviz_default_plugins</exec_depend>
+  <exec_depend>warehouse_ros_mongo</exec_depend>
+  
+  <!-- Test dependencies -->
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
-
+  
+  <!-- Export information -->
   <export>
     <build_type>ament_cmake</build_type>
   </export>
+
+  <!-- 添加nlohmann_json依赖 -->
+  <depend>nlohmann-json3-dev</depend>
 </package>

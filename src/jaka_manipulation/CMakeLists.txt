@@ -75,17 +75,6 @@ install(DIRECTORY config/scene/
   DESTINATION share/${PROJECT_NAME}/config/scene
 )
 
-# 安装 scripts 文件
-install(DIRECTORY scripts/
-  DESTINATION share/${PROJECT_NAME}/scripts
-  USE_SOURCE_PERMISSIONS
-)
-
-# 安装 docs 文件
-install(DIRECTORY docs/
-  DESTINATION share/${PROJECT_NAME}/docs
-)
-
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights

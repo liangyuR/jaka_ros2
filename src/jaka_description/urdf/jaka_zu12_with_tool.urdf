@@ -293,7 +293,8 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://jaka_description/meshes/connect_tool.stl" />
+          filename="package://jaka_description/meshes/connect_tool.stl" 
+          scale="0.001 0.001 0.001"/>
       </geometry>
       <material
         name="">
@@ -307,7 +308,8 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://jaka_description/meshes/connect_tool.stl" />
+          filename="package://jaka_description/meshes/connect_tool.stl" 
+          scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -436,7 +438,7 @@
   <gazebo>
     <!-- <plugin name="gazebo_ros2_control" filename="libgazebo_ros2_control.so"> -->
     <plugin name="ign_ros2_control::IgnitionROS2ControlPlugin" filename="libign_ros2_control-system.so">
-      <parameters>$(find jaka_zu12_moveit_config)/config/ros2_controllers.yaml</parameters>
+      <parameters>$(find jx_zu12_moveit_config)/config/ros2_controllers.yaml</parameters>
       <robotNamespace>/</robotNamespace>
     </plugin>
   </gazebo>

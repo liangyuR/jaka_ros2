@@ -7,7 +7,7 @@ from launch_ros.parameter_descriptions import ParameterValue
 
 def generate_launch_description():
     # Get the URDF file path
-    urdf_file_path = PathJoinSubstitution([FindPackageShare('jaka_description'), 'urdf', 'jaka_zu12.urdf'])
+    urdf_file_path = PathJoinSubstitution([FindPackageShare('jaka_description'), 'urdf', 'jaka_zu12_with_tool.urdf'])
     
     return LaunchDescription([
         # Start the robot_state_publisher node 

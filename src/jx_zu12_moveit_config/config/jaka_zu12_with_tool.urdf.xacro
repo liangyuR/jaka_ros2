@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="jaka_zu12_with_tool">
+    <xacro:arg name="initial_positions_file" default="initial_positions.yaml" />
+
+    <!-- Import jaka_zu12_with_tool urdf file -->
+    <xacro:include filename="$(find jaka_description)/urdf/jaka_zu12_with_tool.urdf" />
+
+    <!-- Import control_xacro -->
+    <xacro:include filename="jaka_zu12_with_tool.ros2_control.xacro" />
+
+
+    <xacro:jaka_zu12_with_tool_ros2_control name="FakeSystem" initial_positions_file="$(arg initial_positions_file)"/>
+
+</robot>

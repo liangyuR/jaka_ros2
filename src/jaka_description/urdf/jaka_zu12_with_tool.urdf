@@ -2,7 +2,7 @@
 <!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
      Commit Version: 1.5.0-0-g9aa0fdb  Build Version: 1.5.7004.21443
      For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
-<robot name="jaka_zu12">
+<robot name="jaka_zu12_with_tool">
   <!-- LINK -->
   <link name="world" />
 
@@ -293,7 +293,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://jaka_description/meshes/connect_tool.stl" 
+          filename="package://jaka_description/meshes/tool/connect_tool.stl" 
           scale="0.001 0.001 0.001"/>
       </geometry>
       <material
@@ -308,7 +308,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://jaka_description/meshes/connect_tool.stl" 
+          filename="package://jaka_description/meshes/tool/connect_tool.stl" 
           scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>

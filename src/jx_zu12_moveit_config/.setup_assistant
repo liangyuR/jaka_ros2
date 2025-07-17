@@ -1,0 +1,25 @@
+moveit_setup_assistant_config:
+  urdf:
+    package: jaka_description
+    relative_path: urdf/jaka_zu12_with_tool.urdf
+  srdf:
+    relative_path: config/jaka_zu12_with_tool.srdf
+  package_settings:
+    author_name: liangyu ran
+    author_email: ranliangyu@enneagon.com
+    generated_timestamp: 1752768247
+  control_xacro:
+    command:
+      - position
+    state:
+      - position
+      - velocity
+  modified_urdf:
+    xacros:
+      - control_xacro
+  control_xacro:
+    command:
+      - position
+    state:
+      - position
+      - velocity

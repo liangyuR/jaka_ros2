@@ -14,64 +14,26 @@
       "color": [0.5, 0.5, 0.5, 1.0]
     },
     {
-      "id": "table",
-      "type": "box",
-      "dimensions": [1.2, 0.8, 0.05],
-      "pose": {
-        "position": [0.6, 0.0, 0.4],
-        "orientation": [0.0, 0.0, 0.0, 1.0]
-      },
-      "color": [0.8, 0.6, 0.4, 1.0]
-    },
-    {
-      "id": "charging_station",
-      "type": "box",
-      "dimensions": [0.5, 0.3, 0.8],
-      "pose": {
-        "position": [-0.5, 0.5, 0.4],
-        "orientation": [0.0, 0.0, 0.0, 1.0]
-      },
-      "color": [0.2, 0.8, 0.2, 1.0]
-    },
-    {
-      "id": "box_1",
-      "type": "box",
+      "id": "rp",
+      "type": "mesh",
       "dimensions": [0.1, 0.1, 0.1],
       "pose": {
-        "position": [0.5, 0.0, 0.475],
+        "position": [0.0, 0.0, 0.0],
         "orientation": [0.0, 0.0, 0.0, 1.0]
       },
-      "color": [0.8, 0.2, 0.2, 1.0]
+      "color": [0.0, 0.0, 1.0, 1.0],
+      "mesh_file": "package://jaka_description/meshes/tool/charge_box.stl"
     },
     {
-      "id": "box_2",
-      "type": "box",
-      "dimensions": [0.08, 0.08, 0.15],
+      "id": "lp",
+      "type": "mesh",
+      "dimensions": [0.1, 0.1, 0.1],
       "pose": {
-        "position": [0.7, 0.1, 0.5],
+        "position": [0.0, 0.0, 0.0],
         "orientation": [0.0, 0.0, 0.0, 1.0]
       },
-      "color": [0.2, 0.2, 0.8, 1.0]
-    },
-    {
-      "id": "cylinder_1",
-      "type": "cylinder",
-      "dimensions": [0.2, 0.05],
-      "pose": {
-        "position": [0.6, -0.2, 0.525],
-        "orientation": [0.0, 0.0, 0.0, 1.0]
-      },
-      "color": [0.8, 0.8, 0.2, 1.0]
-    },
-    {
-      "id": "sphere_1",
-      "type": "sphere",
-      "dimensions": [0.04],
-      "pose": {
-        "position": [0.4, 0.1, 0.465],
-        "orientation": [0.0, 0.0, 0.0, 1.0]
-      },
-      "color": [0.8, 0.2, 0.8, 1.0]
+      "color": [0.0, 0.0, 1.0, 1.0],
+      "mesh_file": "package://jaka_description/meshes/tool/charge_box.stl"
     }
   ]
 }

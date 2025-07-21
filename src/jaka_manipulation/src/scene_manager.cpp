@@ -2,6 +2,9 @@
 #include <fstream>
 #include <filesystem>
 #include <ament_index_cpp/get_package_share_directory.hpp>
+#include <geometric_shapes/mesh_operations.h> // For createMeshFromResource
+#include <geometric_shapes/shape_operations.h> // For constructMsgFromShape
+#include <boost/variant/get.hpp>
 
 namespace jaka_manipulation
 {
@@ -275,12 +278,25 @@ moveit_msgs::msg::CollisionObject SceneManager::createCollisionObject(const Scen
     
     // 如果指定了mesh文件，使用mesh
     if (!object.mesh_file.empty()) {
-        // TODO: 实现STL文件加载
-        // 暂时作为box处理
-        RCLCPP_WARN(logger_, "STL文件支持尚未完全实现，对象 %s 将作为box处理", object.id.c_str());
-        shape_msgs::msg::SolidPrimitive primitive = createPrimitive("box", object.dimensions);
-        collision_obj.primitives.push_back(primitive);
-        collision_obj.primitive_poses.push_back(object.pose);
+        // STL文件加载为mesh
+        auto *mesh = shapes::createMeshFromResource(object.mesh_file);
+        if (mesh != nullptr) {
+            // 单位转换：mm -> m
+            for (unsigned int i = 0; i < mesh->vertex_count; ++i) {
+                mesh->vertices[i * 3 + 0] /= 1000.0;
+                mesh->vertices[i * 3 + 1] /= 1000.0;
+                mesh->vertices[i * 3 + 2] /= 1000.0;
+            }
+            shape_msgs::msg::Mesh mesh_msg;
+            shapes::ShapeMsg shape_msg;
+            shapes::constructMsgFromShape(mesh, shape_msg);
+            collision_obj.meshes.push_back(boost::get<shape_msgs::msg::Mesh>(shape_msg));
+            collision_obj.mesh_poses.push_back(object.pose);
+            delete mesh;
+            RCLCPP_INFO(logger_, "STL文件已作为mesh加载(单位mm->m): %s", object.mesh_file.c_str());
+        } else {
+            RCLCPP_ERROR(logger_, "无法加载STL mesh: %s", object.mesh_file.c_str());
+        }
     } else {
         // 使用基本几何形状
         shape_msgs::msg::SolidPrimitive primitive = createPrimitive(object.type, object.dimensions);

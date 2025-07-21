@@ -18,14 +18,14 @@ ManipulationNode::ManipulationNode() : Node("manipulation_node")
 
     // 等待MoveIt准备就绪
     auto timer = this->create_wall_timer(
-        std::chrono::seconds(1), 
-        std::bind(&ManipulationNode::initialization_timer, this));
+        std::chrono::seconds(1),
+        [this]() { this->initialization_timer(); });
     timer_ = timer;
 
     RCLCPP_INFO(this->get_logger(), "Manipulation node initialized");
 }
 
-void ManipulationNode::initialization_timer()
+void ManipulationNode::initialization_timer() // NOLINT
 {
     static int count = 0;
     count++;

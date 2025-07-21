@@ -1,9 +1,9 @@
-# Default initial positions for jaka_zu12_with_tool's ros2_control fake system
+# Default initial positions for jaka_zu12's ros2_control fake system
 
 initial_positions:
-  joint_1: 0
-  joint_2: 0
-  joint_3: 0
-  joint_4: 0
-  joint_5: 0
+  joint_1: -170
+  joint_2: 175
+  joint_3: -135
+  joint_4: 140
+  joint_5: 80
   joint_6: 0

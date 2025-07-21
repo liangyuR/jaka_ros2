@@ -40,8 +40,9 @@ def generate_launch_description():
             {"camera_port": camera_port}
         ]
     )
-    
+
     return LaunchDescription([
         # 启动节点
-        manipulation_node
+        manipulation_node,
+        alson_client_node
     ])

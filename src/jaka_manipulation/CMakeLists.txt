@@ -70,6 +70,7 @@ ament_target_dependencies(alson_client_node
 # 安装可执行文件
 install(TARGETS
   manipulation_node
+  alson_client_node
   DESTINATION lib/${PROJECT_NAME}
 )
 

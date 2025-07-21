@@ -28,12 +28,15 @@ find_package(ament_index_cpp REQUIRED)
 include_directories(include)
 
 # 添加可执行文件
-add_executable(manipulation_node 
-  src/main.cpp
-  src/manipulation_node.cpp
-  src/scene_manager.cpp
+file(GLOB MANIPULATION_NODE_SRC
+  "src/manipulation/*.cpp"
 )
-target_link_libraries(manipulation_node nlohmann_json::nlohmann_json)
+add_executable(manipulation_node
+  ${MANIPULATION_NODE_SRC}
+)
+target_link_libraries(manipulation_node
+  nlohmann_json::nlohmann_json
+)
 
 ament_target_dependencies(manipulation_node
   rclcpp
@@ -47,6 +50,21 @@ ament_target_dependencies(manipulation_node
   jaka_planner
   std_srvs
   ament_index_cpp
+)
+
+file(GLOB ALSON_CLIENT_SRC
+  "src/alson/*.cpp"
+)
+
+add_executable(alson_client_node
+  ${ALSON_CLIENT_SRC}
+  src/alson/main.cpp
+)
+target_link_libraries(alson_client_node nlohmann_json::nlohmann_json)
+
+ament_target_dependencies(alson_client_node
+  rclcpp
+  std_msgs
 )
 
 # 安装可执行文件

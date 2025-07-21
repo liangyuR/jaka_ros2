@@ -24,6 +24,22 @@ def generate_launch_description():
             {"use_sim_time": True}
         ]
     )
+
+    # 启动alson_client_node
+    # 定义相机IP， 端口
+    camera_ip = LaunchConfiguration("camera_ip", default="192.168.0.188")
+    camera_port = LaunchConfiguration("camera_port", default="54600")
+
+    alson_client_node = Node(
+        package="jaka_manipulation",
+        executable="alson_client_node",
+        name="alson_client_node",
+        output="screen",
+        parameters=[
+            {"camera_ip": camera_ip},
+            {"camera_port": camera_port}
+        ]
+    )
     
     return LaunchDescription([
         # 启动节点

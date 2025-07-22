@@ -23,7 +23,6 @@ find_package(jaka_planner REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(nlohmann_json REQUIRED CONFIG)
 find_package(ament_index_cpp REQUIRED)
-
 # 添加include目录
 include_directories(include)
 

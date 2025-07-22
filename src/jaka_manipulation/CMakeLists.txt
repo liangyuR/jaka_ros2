@@ -23,6 +23,8 @@ find_package(jaka_planner REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(nlohmann_json REQUIRED CONFIG)
 find_package(ament_index_cpp REQUIRED)
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+find_package(ament_cmake_python REQUIRED)
 # 添加include目录
 include_directories(include)
 
@@ -93,6 +95,11 @@ install(DIRECTORY config/scene/
   DESTINATION share/${PROJECT_NAME}/config/scene
 )
 
+# 安装 Python 测试节点
+install(PROGRAMS src/alson/alson_client_test_node.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
@@ -106,3 +113,4 @@ if(BUILD_TESTING)
 endif()
 
 ament_package()
+

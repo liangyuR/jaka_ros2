@@ -23,8 +23,6 @@ find_package(jaka_planner REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(nlohmann_json REQUIRED CONFIG)
 find_package(ament_index_cpp REQUIRED)
-find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
-find_package(ament_cmake_python REQUIRED)
 # 添加include目录
 include_directories(include)
 
@@ -53,25 +51,9 @@ ament_target_dependencies(manipulation_node
   ament_index_cpp
 )
 
-file(GLOB ALSON_CLIENT_SRC
-  "src/alson/*.cpp"
-)
-
-add_executable(alson_client_node
-  ${ALSON_CLIENT_SRC}
-  src/alson/main.cpp
-)
-target_link_libraries(alson_client_node nlohmann_json::nlohmann_json)
-
-ament_target_dependencies(alson_client_node
-  rclcpp
-  std_msgs
-)
-
 # 安装可执行文件
 install(TARGETS
   manipulation_node
-  alson_client_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -93,11 +75,6 @@ install(DIRECTORY config/
 # 安装 scene 目录（确保场景文件目录存在）
 install(DIRECTORY config/scene/
   DESTINATION share/${PROJECT_NAME}/config/scene
-)
-
-# 安装 Python 测试节点
-install(PROGRAMS src/alson/alson_client_test_node.py
-  DESTINATION lib/${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)

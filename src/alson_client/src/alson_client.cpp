@@ -1,11 +1,11 @@
-#include "jaka_manipulation/alson_client.h"
+#include "alson_client/alson_client.h"
 #include <boost/asio.hpp>
 #include <iostream>
 #include <rclcpp/rclcpp.hpp>
 #include <sstream>
 
-namespace jaka_manipulation {
-#define LOGGER rclcpp::get_logger("jaka_manipulation::AlsonClient")
+namespace alson_client {
+#define LOGGER rclcpp::get_logger("alson_client::AlsonClient")
 
 AlsonClient *AlsonClient::GetInstance(const std::string &host, int port) {
   static AlsonClient instance(host, port);
@@ -13,7 +13,9 @@ AlsonClient *AlsonClient::GetInstance(const std::string &host, int port) {
 }
 
 AlsonClient::AlsonClient(const std::string &host, int port) // NOLINT
-    : host_(host), port_(port) {}
+    : host_(host), port_(port) {
+  std::thread([this]() { this->Connect(); }).detach();
+}
 
 bool AlsonClient::Connect() {
   RCLCPP_INFO(LOGGER, "Connecting AlsonClient to %s:%d", host_.c_str(), port_);
@@ -104,39 +106,84 @@ void AlsonClient::receiveLoop() {
   }
 }
 
+// 辅助函数：等待特定响应码
+bool AlsonClient::waitForResponse(const std::string &expect_code,
+                                  int timeout_sec) {
+  std::unique_lock<std::mutex> lock(response_mutex_);
+  expected_code_ = expect_code;
+  response_received_ = false;
+  waiting_response_ = true;
+  bool ok = response_cv_.wait_for(lock, std::chrono::seconds(timeout_sec),
+                                  [this] { return response_received_.load(); });
+  waiting_response_ = false;
+  return ok && last_response_code_ == expect_code;
+}
+
+bool AlsonClient::RunProject(const std::vector<float> &fl_tcp_position,
+                             std::vector<float> *target_pose) {
+  RCLCPP_INFO(LOGGER, "=== RunProject 开始 ===");
+  // 1. 发送运行命令
+  if (!send(CommandType::RUN_PRJ)) {
+    RCLCPP_ERROR(LOGGER, "发送运行项目命令失败");
+    return false;
+  }
+  // 2. 等待 Alson 请求机器人坐标
+  if (!waitForResponse(ResponseCode::ROBOT_COORD, 30)) {
+    RCLCPP_ERROR(LOGGER, "等待 ROBOT_COORD 超时或失败");
+    return false;
+  }
+  // 3. 发送机器人坐标
+  std::string coord_msg = ResponseCode::ROBOT_COORD;
+  for (float v : fl_tcp_position)
+    coord_msg += "," + std::to_string(v);
+  if (!send(coord_msg)) {
+    RCLCPP_ERROR(LOGGER, "发送机器人坐标失败");
+    return false;
+  }
+  // 4. 等待目标位姿
+  if (!waitForResponse(ResponseCode::SEND_POS, 30)) {
+    RCLCPP_ERROR(LOGGER, "等待 SEND_POS 超时或失败");
+    return false;
+  }
+  // 5. 拷贝目标位姿
+  if (target_pose != nullptr) {
+    std::lock_guard<std::mutex> pose_lock(target_pose_mutex_);
+    *target_pose = target_pose_;
+  }
+  RCLCPP_INFO(LOGGER, "=== RunProject 完成 ===");
+  return true;
+}
+
 void AlsonClient::parseResponse(const std::string &response) {
   try {
     std::istringstream iss(response);
     std::string command;
-    if (!std::getline(iss, command, ',')) {
+    std::getline(iss, command, ',');
+    if (command.empty()) {
       RCLCPP_ERROR(LOGGER, "Parse response error: empty command");
       return;
     }
 
-    // 检查 command 是否为数字
-    int cmd_code = 0;
-    try {
-      cmd_code = std::stoi(command);
-    } catch (const std::exception &e) {
-      RCLCPP_ERROR(LOGGER, "Parse response error: invalid command [%s]",
-                   command.c_str());
-      return;
-    }
-
-    std::vector<double> values;
+    std::vector<float> values;
     std::string value;
     while (std::getline(iss, value, ',')) {
       try {
         if (!value.empty())
-          values.push_back(std::stod(value));
+          values.push_back(std::stof(value));
       } catch (const std::exception &e) {
         RCLCPP_ERROR(LOGGER, "Parse response value error: [%s], %s",
                      value.c_str(), e.what());
       }
     }
-
-    if (response_cb_) {
-      response_cb_(static_cast<ResponseCode>(cmd_code), values);
+    const std::string response_code = command;
+    if (waiting_response_ && response_code == expected_code_) {
+      last_response_code_ = response_code;
+      response_received_ = true;
+      if (response_code == ResponseCode::SEND_POS && !values.empty()) {
+        std::lock_guard<std::mutex> pose_lock(target_pose_mutex_);
+        target_pose_ = values;
+      }
+      response_cv_.notify_one();
     }
     RCLCPP_INFO(LOGGER, "Response: %s", response.c_str());
   } catch (const std::exception &e) {
@@ -146,21 +193,20 @@ void AlsonClient::parseResponse(const std::string &response) {
 
 // 命令实现
 bool AlsonClient::ChangeProject(const std::string &project_name) {
-  std::string msg = "510," + project_name;
-  return send(msg);
+  std::string msg = std::string(CommandType::CHANGE_PRJ) + "," + project_name;
+  RCLCPP_INFO(LOGGER, "=== ChangeProject 开始: %s ===", project_name.c_str());
+  if (!send(msg)) {
+    RCLCPP_ERROR(LOGGER, "ChangeProject 发送命令失败: %s",
+                 project_name.c_str());
+    return false;
+  }
+  if (!waitForResponse(ResponseCode::PRJ_CHANGE_SUCCESS, 10)) {
+    RCLCPP_ERROR(LOGGER, "ChangeProject 超时或失败: %s", project_name.c_str());
+    return false;
+  }
+  RCLCPP_INFO(LOGGER, "=== ChangeProject 成功: %s ===", project_name.c_str());
+  return true;
 }
-
-bool AlsonClient::ChangeParameter(const std::string &param_group_name) {
-  std::string msg = "ChangePara," + param_group_name;
-  return send(msg);
-}
-
-bool AlsonClient::ChangeMode(const std::string &template_name) {
-  std::string msg = "ChangeMode," + template_name;
-  return send(msg);
-}
-
-bool AlsonClient::RunProject() { return send("210"); }
 
 void AlsonClient::startAsyncReconnect() {
   std::lock_guard<std::mutex> lock(reconnect_mutex_);
@@ -204,8 +250,4 @@ void AlsonClient::startAsyncReconnect() {
   // 分离线程，不等待其完成
   reconnect_thread_->detach();
 }
-
-bool AlsonClient::ScanDone() { return send("ScanDone"); }
-
-bool AlsonClient::RequestRobotCoord() { return send("REQ_RobotCoord"); }
-} // namespace jaka_manipulation
+} // namespace alson_client

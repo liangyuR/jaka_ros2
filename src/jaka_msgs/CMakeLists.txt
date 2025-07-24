@@ -30,6 +30,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/ClearError.srv"
   "srv/GetFK.srv"
   "srv/GetIK.srv"
+  "srv/RunProject.srv"
+  "srv/GetPose.srv"
    DEPENDENCIES std_msgs std_srvs
 )
 

@@ -1,0 +1,10 @@
+# Request
+int32 tool_id  # 0: 法兰
+
+---
+# Response
+bool success
+string message
+float32[] pose         # [x, y, z, rx, ry, rz] 机械臂位姿
+float32[] joint_angles # 关节角度
+float32[] joint_rad    # 关节弧度

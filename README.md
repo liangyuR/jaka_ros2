@@ -188,3 +188,8 @@ ros2 launch jaka_zu12_moveit_config demo.launch.py
 - 确保 `jaka_driver` 和 MoveIt 2 不能同时运行
 - 使用前请确认机器人控制器版本符合要求
 - 建议在测试环境中先验证功能后再用于生产环境
+
+# BUILD
+vcpkg install abseil:x64-linux
+just b
+待完善

@@ -1,4 +1,5 @@
 #include "alson_client/alson_client_node.h"
+#include <nlohmann/json.hpp>
 #include <std_srvs/srv/trigger.hpp>
 
 namespace alson_client {
@@ -27,66 +28,47 @@ void AlsonClientNode::initAlsonClient() {
       this->declare_parameter<std::string>("host", "192.168.0.188");
   const auto port = this->declare_parameter<int>("port", 54600);
   client_ = AlsonClient::GetInstance(host, port);
+  client_->setEventCallback([this](const std::string &event) {
+    RCLCPP_INFO(this->get_logger(), "Alson event: %s", event.c_str());
+    PublishEvents(event);
+  });
   RCLCPP_INFO(this->get_logger(), "AlsonClient initialized");
-}
-
-void AlsonClientNode::handleRequestRobotCoord() {
-  // TODO(@liangyu) get robot coord from jaka_planner, send to alson client
 }
 
 void AlsonClientNode::handleRunProjService(
     const std::shared_ptr<jaka_msgs::srv::RunProject::Request> &request,
     std::shared_ptr<jaka_msgs::srv::RunProject::Response> &response) {
-
   if (!validateRequest(request, response)) {
     return;
   }
 
-  if (request->wait_for_completion) {
-    // 阻塞模式
-    auto result = executeProject(request->project_id, request->fl_tcp_position);
-    fillResponse(response, result);
-    onResponseCallback(ResponseCode::SEND_POS, result.pose);
-  } else {
-    // 异步模式
-    response->success = true;
-    response->message = "Request accepted, processing asynchronously...";
-    response->status_code = 1;
-    onResponseCallback(ResponseCode::RUN_PRJ_SUCCESS, {});
+  std::vector<float> pose;
+  std::string message;
+  auto success = executeProject(request->project_id, request->fl_tcp_position,
+                                &pose, &message);
+  fillResponse(response, success, pose, message);
 
-    std::thread([this, request]() {
-      auto result =
-          executeProject(request->project_id, request->fl_tcp_position);
-      onResponseCallback(ResponseCode::SEND_POS, result.pose);
-    }).detach();
-  }
+  auto json = nlohmann::json::object();
+  json["project_id"] = request->project_id;
+  json["status_code"] = response->status_code;
+  json["success"] = success;
+  json["pose"] = pose;
+  json["message"] = message;
+  PublishEvents(json.dump());
 }
 
-void AlsonClientNode::onResponseCallback(const std::string &code,
-                                         const std::vector<float> &data) {
+void AlsonClientNode::PublishEvents(const std::string &json) {
   auto msg = std_msgs::msg::String();
-
-  std::string response_str = "ResponseCode:" + code;
-  if (!data.empty()) {
-    response_str += ",Data:";
-    for (size_t i = 0; i < data.size(); ++i) {
-      if (i > 0)
-        response_str += ",";
-      response_str += std::to_string(data[i]);
-    }
-  }
-  msg.data = response_str;
+  msg.data = json;
   alson_events_publisher_->publish(msg);
-
-  RCLCPP_DEBUG(this->get_logger(), "Published response: %s",
-               response_str.c_str());
+  RCLCPP_DEBUG(this->get_logger(), "Published response: %s", json.c_str());
 }
 
 bool AlsonClientNode::validateRequest(
     const std::shared_ptr<jaka_msgs::srv::RunProject::Request> &request,
     std::shared_ptr<jaka_msgs::srv::RunProject::Response> &response) {
   if (request->project_id.empty() || request->fl_tcp_position.size() != 6) {
-    response->success = false;
+    response->status_code = -1;
     response->message = "Project ID is empty or fl_tcp_position is not 6D";
     return false;
   }
@@ -95,33 +77,31 @@ bool AlsonClientNode::validateRequest(
 
 void AlsonClientNode::fillResponse(
     std::shared_ptr<jaka_msgs::srv::RunProject::Response> &response,
-    const ProjectExecutionResult &result) {
-  response->success = result.success;
-  response->pose = result.pose;
-  response->message = result.message;
-  response->status_code = result.success ? 0 : -1;
+    bool success, const std::vector<float> &pose, const std::string &message) {
+  response->pose = pose;
+  response->message = message;
+  response->status_code = success ? 0 : -1;
 }
 
-AlsonClientNode::ProjectExecutionResult
-AlsonClientNode::executeProject(const std::string &project_id,
-                                const std::vector<float> &fl_tcp_position) {
-  ProjectExecutionResult result;
+bool AlsonClientNode::executeProject(const std::string &project_id,
+                                     const std::vector<float> &fl_tcp_position,
+                                     std::vector<float> *pose,
+                                     std::string *message) {
   std::lock_guard<std::mutex> lock(client_mutex_);
 
   RCLCPP_INFO(this->get_logger(), "Change project to %s", project_id.c_str());
-  bool success = client_->ChangeProject(project_id);
-
-  if (success) {
-    // 发布切换项目成功的消息
-    onResponseCallback(ResponseCode::PRJ_CHANGE_SUCCESS, {});
-    RCLCPP_INFO(this->get_logger(), "Run project");
-    success = client_->RunProject(fl_tcp_position, &result.pose);
+  if (!client_->ChangeProject(project_id)) {
+    *message = "Project change failed";
+    return false;
   }
 
-  result.success = success;
-  result.message =
-      success ? "Project executed successfully" : "Project execution failed";
-
-  return result;
+  RCLCPP_INFO(this->get_logger(), "Run project");
+  bool success = client_->RunProject(fl_tcp_position, pose);
+  if (!success) {
+    *message = "Project execution failed";
+    return false;
+  }
+  *message = "Project executed successfully";
+  return true;
 }
 } // namespace alson_client

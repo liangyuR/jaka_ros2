@@ -13,6 +13,7 @@ find_package(jaka_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 find_package(ament_cmake_python REQUIRED)
+find_package(nlohmann_json REQUIRED)
 
 # Find Boost
 find_package(Boost REQUIRED COMPONENTS system)
@@ -30,6 +31,7 @@ add_executable(alson_client_node
 # Link libraries for alson_client_node
 target_link_libraries(alson_client_node
   ${Boost_LIBRARIES}
+  nlohmann_json::nlohmann_json
 )
 
 # Link ament libraries for alson_client_node

@@ -30,9 +30,9 @@ struct ResponseCode {
   static constexpr const char *MODE_CHANGE_SUCCESS = "532";
   static constexpr const char *MODE_CHANGE_FAIL = "531";
   static constexpr const char *ROBOT_COORD = "000";
+  // 发送抓取位 || 目标点位, tf_target_in_base
   static constexpr const char *SEND_POS = "310";
   static constexpr const char *SCAN_DONE = "408";
-  static constexpr const char *RUN_PRJ_SUCCESS = "300"; // running success
 };
 
 class AlsonClient {
@@ -46,6 +46,11 @@ public:
   bool RunProject(const std::vector<float> &fl_tcp_position,
                   std::vector<float> *target_pose);
 
+  void
+  setEventCallback(const std::function<void(const std::string &)> &callback) {
+    event_callback_ = callback;
+  }
+
 private:
   AlsonClient(const std::string &host, int port);
   void receiveLoop();
@@ -53,6 +58,15 @@ private:
   void parseResponse(const std::string &response);
   void startAsyncReconnect();
   bool waitForResponse(const std::string &expect_code, int timeout_sec);
+
+  // 心跳机制
+  void startHeartbeatThread();
+  void sendHeartbeat();
+  std::unique_ptr<std::thread> heartbeat_thread_;
+  std::atomic<bool> heartbeat_running_{false};
+  std::mutex heartbeat_mutex_;
+  std::condition_variable heartbeat_cv_;
+  int heartbeat_interval_sec_ = 5;
 
   boost::asio::io_context io_context_;
   std::string host_;
@@ -80,6 +94,9 @@ private:
   // 存储目标位姿
   std::vector<float> target_pose_;
   std::mutex target_pose_mutex_;
+
+  // 事件回调
+  std::function<void(const std::string &)> event_callback_;
 };
 
 } // namespace alson_client

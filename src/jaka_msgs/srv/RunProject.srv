@@ -1,11 +1,9 @@
 # Request
 string project_id            # 项目名称
 float32[] fl_tcp_position    # 当前法兰的位姿
-bool wait_for_completion     # 是否阻塞
 
 ---
 # Response
-bool success
 string message
 float32[] pose               # [x, y, z, rx, ry, rz] 机械臂位姿
-int32 status_code
+int32 status_code            # -1 失败, 0 成功

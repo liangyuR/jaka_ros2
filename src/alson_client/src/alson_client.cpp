@@ -14,7 +14,10 @@ AlsonClient *AlsonClient::GetInstance(const std::string &host, int port) {
 
 AlsonClient::AlsonClient(const std::string &host, int port) // NOLINT
     : host_(host), port_(port) {
-  std::thread([this]() { this->Connect(); }).detach();
+  std::thread([this]() {
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    this->Connect();
+  }).detach();
 }
 
 bool AlsonClient::Connect() {
@@ -33,10 +36,15 @@ bool AlsonClient::Connect() {
     running_ = true;
     recv_thread_ =
         std::make_unique<std::thread>(&AlsonClient::receiveLoop, this);
+    startHeartbeatThread(); // 启动心跳线程
+    if (event_callback_)
+      event_callback_("connected");
     return true;
   } catch (std::exception &e) {
     RCLCPP_ERROR(LOGGER, "Connect failed: %s", e.what());
     connected_ = false;
+    if (event_callback_)
+      event_callback_(std::string("connect_failed: ") + e.what());
     return false;
   }
 }
@@ -46,6 +54,16 @@ void AlsonClient::Disconnect() {
   running_ = false;
   if (recv_thread_ && recv_thread_->joinable()) {
     recv_thread_->join();
+  }
+
+  // 停止心跳线程
+  {
+    std::lock_guard<std::mutex> lock(heartbeat_mutex_);
+    heartbeat_running_ = false;
+    heartbeat_cv_.notify_all();
+  }
+  if (heartbeat_thread_ && heartbeat_thread_->joinable()) {
+    heartbeat_thread_->join();
   }
 
   // Clear reconnecting state
@@ -64,6 +82,8 @@ void AlsonClient::Disconnect() {
   }
   connected_ = false;
   RCLCPP_INFO(LOGGER, "AlsonClient disconnected");
+  if (event_callback_)
+    event_callback_("disconnected");
 }
 
 bool AlsonClient::send(const std::string &msg) { // NOLINT
@@ -94,13 +114,19 @@ void AlsonClient::receiveLoop() {
       size_t len = socket_->read_some(boost::asio::buffer(data));
       if (len == 0) {
         connected_ = false;
+        if (event_callback_)
+          event_callback_("connection_lost");
         break;
       }
       std::string response(data.data(), len);
+      if (event_callback_)
+        event_callback_(std::string("recv: ") + response);
       parseResponse(response);
     } catch (std::exception &e) {
       RCLCPP_ERROR(LOGGER, "Receive error: %s", e.what());
       connected_ = false;
+      if (event_callback_)
+        event_callback_(std::string("receive_error: ") + e.what());
       break;
     }
   }
@@ -229,18 +255,26 @@ void AlsonClient::startAsyncReconnect() {
 
       RCLCPP_WARN(LOGGER, "发送失败，%d秒后重试 (%d/%d)", delay,
                   retry_count_.load(), max_retries);
+      if (event_callback_)
+        event_callback_("reconnect_wait: " + std::to_string(delay) + "s");
 
       std::this_thread::sleep_for(std::chrono::seconds(delay));
 
       // 尝试重连
       if (Connect()) {
         RCLCPP_INFO(LOGGER, "重连成功");
+        if (event_callback_)
+          event_callback_("reconnect_success");
         retry_count_ = 0; // 重置计数器
       } else {
         RCLCPP_ERROR(LOGGER, "重连失败");
+        if (event_callback_)
+          event_callback_("reconnect_failed");
       }
     } else {
       RCLCPP_ERROR(LOGGER, "重连失败，已达到最大重试次数");
+      if (event_callback_)
+        event_callback_("reconnect_giveup");
       retry_count_ = 0; // 重置计数器
     }
 
@@ -249,5 +283,40 @@ void AlsonClient::startAsyncReconnect() {
 
   // 分离线程，不等待其完成
   reconnect_thread_->detach();
+}
+
+void AlsonClient::startHeartbeatThread() {
+  std::lock_guard<std::mutex> lock(heartbeat_mutex_);
+  if (heartbeat_running_)
+    return;
+  heartbeat_running_ = true;
+  heartbeat_thread_ = std::make_unique<std::thread>([this]() {
+    while (heartbeat_running_) {
+      std::unique_lock<std::mutex> lk(heartbeat_mutex_);
+      heartbeat_cv_.wait_for(lk, std::chrono::seconds(heartbeat_interval_sec_));
+      if (!heartbeat_running_)
+        break;
+      sendHeartbeat();
+    }
+  });
+}
+
+void AlsonClient::sendHeartbeat() {
+  // 发送心跳包，可以自定义内容，如"PING"或特殊命令
+  if (!connected_)
+    return;
+  std::string heartbeat_msg = "PING";
+  if (!send(heartbeat_msg)) {
+    RCLCPP_WARN(LOGGER, "Heartbeat send failed, will trigger reconnect");
+    if (event_callback_)
+      event_callback_("heartbeat_failed");
+    // 这里可以选择立即断开重连
+    Disconnect();
+    startAsyncReconnect();
+  } else {
+    RCLCPP_DEBUG(LOGGER, "Heartbeat sent");
+    if (event_callback_)
+      event_callback_("heartbeat_sent");
+  }
 }
 } // namespace alson_client

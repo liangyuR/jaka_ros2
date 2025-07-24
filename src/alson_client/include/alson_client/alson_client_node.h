@@ -40,12 +40,9 @@ private:
   void handleRunProjService(
       const std::shared_ptr<jaka_msgs::srv::RunProject::Request> &request,
       std::shared_ptr<jaka_msgs::srv::RunProject::Response> &response);
-  void handleRunProject();
-  void handleRequestRobotCoord();
 
-  // Response callback for AlsonClient
-  void onResponseCallback(const std::string &code,
-                          const std::vector<float> &data);
+  // 发布响应到 topic
+  void PublishEvents(const std::string &json);
 
   // Topic publishers
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr alson_events_publisher_;
@@ -54,15 +51,9 @@ private:
   AlsonClient *client_;
   std::mutex client_mutex_;
 
-  struct ProjectExecutionResult {
-    bool success;
-    std::vector<float> pose;
-    std::string message;
-  };
-
-  ProjectExecutionResult
-  executeProject(const std::string &project_id,
-                 const std::vector<float> &fl_tcp_position);
+  bool executeProject(const std::string &project_id,
+                      const std::vector<float> &fl_tcp_position,
+                      std::vector<float> *pose, std::string *message);
 
   static bool validateRequest(
       const std::shared_ptr<jaka_msgs::srv::RunProject::Request> &request,
@@ -70,7 +61,8 @@ private:
 
   static void
   fillResponse(std::shared_ptr<jaka_msgs::srv::RunProject::Response> &response,
-               const ProjectExecutionResult &result);
+               bool success, const std::vector<float> &pose,
+               const std::string &message);
 };
 
 } // namespace alson_client

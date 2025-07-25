@@ -18,6 +18,7 @@ find_package(std_srvs REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/RobotMsg.msg"
 
+  # JAKA Robot
   "srv/Move.srv"
   "srv/ServoMoveEnable.srv"
   "srv/ServoMove.srv"
@@ -30,8 +31,11 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/ClearError.srv"
   "srv/GetFK.srv"
   "srv/GetIK.srv"
-  "srv/RunProject.srv"
   "srv/GetPose.srv"
+
+  # Alson
+  "srv/UpdateCameraPara.srv"
+  "srv/RunProject.srv"
    DEPENDENCIES std_msgs std_srvs
 )
 

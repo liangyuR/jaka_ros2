@@ -1,0 +1,11 @@
+string ip
+int32 port
+string charge_station_id
+string connector_id
+string placement_id
+string charge_box_id
+
+---
+
+bool success
+string message

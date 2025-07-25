@@ -1,0 +1,10 @@
+<RCC>
+    <qresource prefix="/">
+        <file>main.qml</file>
+        <file>AlsonClientUI.qml</file>
+        <file>RobotControlUI.qml</file>
+        <file>components/FloatPoseInputDialog.qml</file>
+        <file>components/NetworkConfigPane.qml</file>
+        <file>qtquickcontrols2.conf</file>
+    </qresource>
+</RCC> 

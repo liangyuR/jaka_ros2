@@ -13,30 +13,48 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
-find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(jaka_msgs REQUIRED)
+find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2)
 
 set(PROJECT_SOURCES
     src/main.cpp
-    src/mainwindow.cpp
-    include/mainwindow.h
-    src/mainwindow.ui
+    src/alson_client_controller.cpp
+    include/alson_client_controller.h
 )
+
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/qml/qtquickcontrols2.conf
+    ${CMAKE_CURRENT_BINARY_DIR}/qtquickcontrols2.conf
+    COPYONLY
+)
+
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/qtquickcontrols2.conf
+    DESTINATION lib/${PROJECT_NAME}
+)
+
+qt_add_resources(AUTO_CHARGE_RESOURCES qml/resources.qrc)
 
 qt_add_executable(auto_charge
     MANUAL_FINALIZATION
     ${PROJECT_SOURCES}
+    ${AUTO_CHARGE_RESOURCES}
 )
 
 target_include_directories(auto_charge PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 
-target_link_libraries(auto_charge PRIVATE Qt6::Widgets)
+target_link_libraries(auto_charge PRIVATE 
+    Qt6::Quick
+    Qt6::QuickControls2
+)
 ament_target_dependencies(auto_charge PUBLIC 
   rclcpp
   std_msgs
   sensor_msgs
   geometry_msgs
+  jaka_msgs
 )
 
 install(TARGETS auto_charge

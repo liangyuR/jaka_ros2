@@ -1,29 +1,34 @@
 #include "alson_client/alson_client.h"
 #include <boost/asio.hpp>
 #include <iostream>
+#include <nlohmann/json.hpp> // Added for JSON handling
 #include <rclcpp/rclcpp.hpp>
 #include <sstream>
 
 namespace alson_client {
 #define LOGGER rclcpp::get_logger("alson_client::AlsonClient")
 
-AlsonClient *AlsonClient::GetInstance(const std::string &host, int port) {
-  static AlsonClient instance(host, port);
-  return &instance;
-}
-
-AlsonClient::AlsonClient(const std::string &host, int port) // NOLINT
+AlsonClient::AlsonClient(const std::string &host, int port,
+                         bool auto_connect) // NOLINT
     : host_(host), port_(port) {
-  std::thread([this]() {
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-    this->Connect();
-  }).detach();
+  if (auto_connect) {
+    std::thread([this]() {
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+      this->Connect();
+    }).detach();
+  }
 }
 
 bool AlsonClient::Connect() {
   RCLCPP_INFO(LOGGER, "Connecting AlsonClient to %s:%d", host_.c_str(), port_);
   std::lock_guard<std::mutex> lock(socket_mutex_);
   if (connected_) {
+    RCLCPP_INFO(LOGGER, "AlsonClient already connected");
+    if (structured_event_callback_) {
+      EventData event{
+          EventType::CONNECTION_STATUS, true, "Already connected", "", 0, 0};
+      structured_event_callback_(event);
+    }
     return true;
   }
 
@@ -36,24 +41,63 @@ bool AlsonClient::Connect() {
     running_ = true;
     recv_thread_ =
         std::make_unique<std::thread>(&AlsonClient::receiveLoop, this);
-    startHeartbeatThread(); // 启动心跳线程
-    if (event_callback_)
-      event_callback_("connected");
+    // TODO(@liangyu) 暂时关闭心跳
+    // startHeartbeatThread(); // 启动心跳线程
+    if (structured_event_callback_) {
+      EventData event{EventType::CONNECTION_STATUS,
+                      true,
+                      "Connected successfully",
+                      "",
+                      0,
+                      0};
+      structured_event_callback_(event);
+    }
     return true;
   } catch (std::exception &e) {
     RCLCPP_ERROR(LOGGER, "Connect failed: %s", e.what());
     connected_ = false;
-    if (event_callback_)
-      event_callback_(std::string("connect_failed: ") + e.what());
+    if (structured_event_callback_) {
+      EventData event{EventType::CONNECTION_STATUS,
+                      false,
+                      "Connect failed: " + std::string(e.what()),
+                      "",
+                      0,
+                      0};
+      structured_event_callback_(event);
+    }
     return false;
   }
 }
 
 void AlsonClient::Disconnect() {
   RCLCPP_INFO(LOGGER, "Disconnecting AlsonClient");
+
+  // 先设置运行标志为false，让接收线程有机会退出
   running_ = false;
+  connected_ = false;
+
+  // 给接收线程一点时间退出
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+  // 然后关闭 socket
+  {
+    std::lock_guard<std::mutex> lock(socket_mutex_);
+    if (socket_) {
+      try {
+        socket_->close(); // 关闭 socket
+        RCLCPP_INFO(LOGGER, "Socket closed");
+      } catch (...) {
+        RCLCPP_WARN(LOGGER, "Error closing socket");
+      }
+      socket_.reset();
+    }
+  }
+
+  // 等待接收线程结束
   if (recv_thread_ && recv_thread_->joinable()) {
+    RCLCPP_INFO(LOGGER, "Waiting for receive thread to finish...");
     recv_thread_->join();
+    RCLCPP_INFO(LOGGER, "Receive thread finished");
   }
 
   // 停止心跳线程
@@ -72,18 +116,13 @@ void AlsonClient::Disconnect() {
     reconnect_thread_->join();
   }
 
-  std::lock_guard<std::mutex> lock(socket_mutex_);
-  if (socket_) {
-    try {
-      socket_->close();
-    } catch (...) {
-    }
-    socket_.reset();
-  }
   connected_ = false;
   RCLCPP_INFO(LOGGER, "AlsonClient disconnected");
-  if (event_callback_)
-    event_callback_("disconnected");
+  if (structured_event_callback_) {
+    EventData event{
+        EventType::CONNECTION_STATUS, true, "Disconnected", "", 0, 0};
+    structured_event_callback_(event);
+  }
 }
 
 bool AlsonClient::send(const std::string &msg) { // NOLINT
@@ -110,26 +149,93 @@ bool AlsonClient::send(const std::string &msg) { // NOLINT
 void AlsonClient::receiveLoop() {
   while (running_ && connected_) {
     try {
-      std::array<char, 4096> data{};
-      size_t len = socket_->read_some(boost::asio::buffer(data));
-      if (len == 0) {
-        connected_ = false;
-        if (event_callback_)
-          event_callback_("connection_lost");
+      // 检查是否应该退出
+      if (!running_ || !connected_) {
         break;
       }
+
+      // 使用带超时的读取方式
+      std::array<char, 4096> data{};
+
+      // 检查socket是否可用
+      {
+        std::lock_guard<std::mutex> lock(socket_mutex_);
+        if (!socket_ || !connected_) {
+          break;
+        }
+      }
+
+      // 使用select或poll来检查是否有数据可读
+      boost::system::error_code ec;
+      size_t len = 0;
+
+      // 尝试读取数据，设置较短的超时
+      {
+        std::lock_guard<std::mutex> lock(socket_mutex_);
+        if (socket_ && connected_) {
+          // 设置socket为非阻塞模式
+          socket_->non_blocking(true);
+
+          // 尝试读取数据
+          len = socket_->read_some(boost::asio::buffer(data), ec);
+        }
+      }
+
+      if (ec) {
+        if (ec == boost::asio::error::would_block) {
+          // 没有数据可读，短暂等待后继续
+          std::this_thread::sleep_for(std::chrono::milliseconds(10));
+          continue;
+        } else {
+          // 其他错误，退出循环
+          RCLCPP_ERROR(LOGGER, "Socket read error: %s", ec.message().c_str());
+          connected_ = false;
+          if (structured_event_callback_) {
+            EventData event{EventType::CONNECTION_STATUS,
+                            false,
+                            "Socket read error: " + ec.message(),
+                            "",
+                            0,
+                            0};
+            structured_event_callback_(event);
+          }
+          break;
+        }
+      }
+
+      if (len == 0) {
+        connected_ = false;
+        if (structured_event_callback_) {
+          EventData event{
+              EventType::CONNECTION_STATUS, false, "Connection lost", "", 0, 0};
+          structured_event_callback_(event);
+        }
+        break;
+      }
+
       std::string response(data.data(), len);
-      if (event_callback_)
-        event_callback_(std::string("recv: ") + response);
+      if (structured_event_callback_) {
+        EventData event{
+            EventType::DATA_RECEIVED, true, "Data received", response, 0, 0};
+        structured_event_callback_(event);
+      }
       parseResponse(response);
     } catch (std::exception &e) {
       RCLCPP_ERROR(LOGGER, "Receive error: %s", e.what());
       connected_ = false;
-      if (event_callback_)
-        event_callback_(std::string("receive_error: ") + e.what());
+      if (structured_event_callback_) {
+        EventData event{EventType::CONNECTION_STATUS,
+                        false,
+                        "Receive error: " + std::string(e.what()),
+                        "",
+                        0,
+                        0};
+        structured_event_callback_(event);
+      }
       break;
     }
   }
+  RCLCPP_INFO(LOGGER, "Receive loop exited");
 }
 
 // 辅助函数：等待特定响应码
@@ -255,26 +361,42 @@ void AlsonClient::startAsyncReconnect() {
 
       RCLCPP_WARN(LOGGER, "发送失败，%d秒后重试 (%d/%d)", delay,
                   retry_count_.load(), max_retries);
-      if (event_callback_)
-        event_callback_("reconnect_wait: " + std::to_string(delay) + "s");
+      if (structured_event_callback_) {
+        EventData event{EventType::RECONNECT_STATUS,
+                        true,
+                        "Reconnect wait: " + std::to_string(delay) + "s",
+                        "",
+                        0,
+                        0};
+        structured_event_callback_(event);
+      }
 
       std::this_thread::sleep_for(std::chrono::seconds(delay));
 
       // 尝试重连
       if (Connect()) {
         RCLCPP_INFO(LOGGER, "重连成功");
-        if (event_callback_)
-          event_callback_("reconnect_success");
+        if (structured_event_callback_) {
+          EventData event{
+              EventType::RECONNECT_STATUS, true, "Reconnect success", "", 0, 0};
+          structured_event_callback_(event);
+        }
         retry_count_ = 0; // 重置计数器
       } else {
         RCLCPP_ERROR(LOGGER, "重连失败");
-        if (event_callback_)
-          event_callback_("reconnect_failed");
+        if (structured_event_callback_) {
+          EventData event{
+              EventType::RECONNECT_STATUS, false, "Reconnect failed", "", 0, 0};
+          structured_event_callback_(event);
+        }
       }
     } else {
       RCLCPP_ERROR(LOGGER, "重连失败，已达到最大重试次数");
-      if (event_callback_)
-        event_callback_("reconnect_giveup");
+      if (structured_event_callback_) {
+        EventData event{
+            EventType::RECONNECT_STATUS, false, "Reconnect giveup", "", 0, 0};
+        structured_event_callback_(event);
+      }
       retry_count_ = 0; // 重置计数器
     }
 
@@ -308,15 +430,21 @@ void AlsonClient::sendHeartbeat() {
   std::string heartbeat_msg = "PING";
   if (!send(heartbeat_msg)) {
     RCLCPP_WARN(LOGGER, "Heartbeat send failed, will trigger reconnect");
-    if (event_callback_)
-      event_callback_("heartbeat_failed");
+    if (structured_event_callback_) {
+      EventData event{
+          EventType::HEARTBEAT_STATUS, false, "Heartbeat failed", "", 0, 0};
+      structured_event_callback_(event);
+    }
     // 这里可以选择立即断开重连
     Disconnect();
     startAsyncReconnect();
   } else {
     RCLCPP_DEBUG(LOGGER, "Heartbeat sent");
-    if (event_callback_)
-      event_callback_("heartbeat_sent");
+    if (structured_event_callback_) {
+      EventData event{
+          EventType::HEARTBEAT_STATUS, true, "Heartbeat sent", "", 0, 0};
+      structured_event_callback_(event);
+    }
   }
 }
 } // namespace alson_client

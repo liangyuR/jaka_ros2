@@ -14,12 +14,16 @@ find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(jaka_msgs REQUIRED)
+find_package(nlohmann_json REQUIRED)
+find_package(yaml-cpp REQUIRED)
 find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2)
 
 set(PROJECT_SOURCES
     src/main.cpp
-    src/alson_client_controller.cpp
-    include/alson_client_controller.h
+    src/auto_charge_node.cpp
+    src/camera_controller.cpp
+    include/auto_charge/auto_charge_node.h
+    include/auto_charge/camera_controller.h
 )
 
 configure_file(
@@ -31,6 +35,12 @@ configure_file(
 install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/qtquickcontrols2.conf
     DESTINATION lib/${PROJECT_NAME}
+)
+
+# 安装配置文件
+install(DIRECTORY config/
+    DESTINATION share/${PROJECT_NAME}/config
+    FILES_MATCHING PATTERN "*.yaml"
 )
 
 qt_add_resources(AUTO_CHARGE_RESOURCES qml/resources.qrc)
@@ -48,6 +58,8 @@ target_include_directories(auto_charge PUBLIC
 target_link_libraries(auto_charge PRIVATE 
     Qt6::Quick
     Qt6::QuickControls2
+    nlohmann_json::nlohmann_json
+    yaml-cpp
 )
 ament_target_dependencies(auto_charge PUBLIC 
   rclcpp

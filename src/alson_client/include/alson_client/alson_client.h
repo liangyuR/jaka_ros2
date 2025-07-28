@@ -5,6 +5,7 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <thread>
 #include <vector>
@@ -37,22 +38,42 @@ struct ResponseCode {
 
 class AlsonClient {
 public:
-  static AlsonClient *GetInstance(const std::string &host, int port);
+  // 定义事件类型枚举
+  enum class EventType {
+    CONNECTION_STATUS,
+    DATA_RECEIVED,
+    RECONNECT_STATUS,
+    HEARTBEAT_STATUS,
+    PROJECT_STATUS
+  };
+
+  // 定义事件数据结构
+  struct EventData {
+    EventType type;
+    bool success;
+    std::string message;
+    std::string data; // 用于存储额外数据
+    int retry_count;
+    int delay;
+  };
+
+  // 构造函数，支持自动连接选项
+  AlsonClient(const std::string &host, int port, bool auto_connect = true);
 
   bool Connect();
   void Disconnect();
+  bool IsConnected() const { return connected_.load(); }
 
   bool ChangeProject(const std::string &project_name);
   bool RunProject(const std::vector<float> &fl_tcp_position,
                   std::vector<float> *target_pose);
 
   void
-  setEventCallback(const std::function<void(const std::string &)> &callback) {
-    event_callback_ = callback;
+  setEventCallback(const std::function<void(const EventData &)> &callback) {
+    structured_event_callback_ = callback;
   }
 
 private:
-  AlsonClient(const std::string &host, int port);
   void receiveLoop();
   bool send(const std::string &msg);
   void parseResponse(const std::string &response);
@@ -83,6 +104,9 @@ private:
   std::unique_ptr<std::thread> reconnect_thread_;
   std::mutex reconnect_mutex_;
 
+  // 断开连接超时
+  static constexpr int DISCONNECT_TIMEOUT_SEC = 3;
+
   // 同步等待相关成员变量
   std::atomic<bool> waiting_response_{false};
   std::atomic<bool> response_received_{false};
@@ -96,7 +120,7 @@ private:
   std::mutex target_pose_mutex_;
 
   // 事件回调
-  std::function<void(const std::string &)> event_callback_;
+  std::function<void(const EventData &)> structured_event_callback_;
 };
 
 } // namespace alson_client

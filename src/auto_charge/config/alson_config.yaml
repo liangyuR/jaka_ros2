@@ -1,0 +1,10 @@
+alson_client:
+  host: "192.168.0.188"
+  port: 54600
+  wait_for_connection: 30
+  run_project_timeout: 30
+
+  charge_station: "01"
+  charge_box: "Box"
+  connector: "11"
+  placement: "12"

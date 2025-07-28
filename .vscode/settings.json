@@ -24,5 +24,6 @@
         "*.sdf": "xml"
     },
     "python.defaultInterpreterPath": "/opt/ros/humble/bin/python3",
-    "ros.distro": "humble"
+    "ros.distro": "humble",
+    "cmake.ignoreCMakeListsMissing": true
 }

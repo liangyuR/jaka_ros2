@@ -1,32 +1,51 @@
+#include "auto_charge/auto_charge_node.h"
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
+#include <rclcpp/rclcpp.hpp>
+
+using namespace Qt::StringLiterals;
 
 int main(int argc, char *argv[]) {
   QGuiApplication app(argc, argv);
 
   // 设置应用信息
-  app.setApplicationName("Auto Charge Manager");
-  app.setApplicationVersion("0.1.0");
-  app.setOrganizationName("Auto Charge Team");
+  QGuiApplication::setApplicationName("Auto Charge Manager");
+  QGuiApplication::setApplicationVersion("0.1.0");
+  QGuiApplication::setOrganizationName("Auto Charge Team");
 
   // 设置Material样式
   QQuickStyle::setStyle("Material");
 
+  // 初始化ROS2
+  rclcpp::init(argc, argv);
+
+  // 创建AutoChargeNode实例
+  auto auto_charge_node = std::make_unique<auto_charge::AutoChargeNode>();
+
   QQmlApplicationEngine engine;
 
+  // 将AutoChargeNode注册到QML上下文
+  engine.rootContext()->setContextProperty("autoChargeNode",
+                                           auto_charge_node.get());
+
   // 加载主QML文件
-  const QUrl url(u"qrc:/main.qml"_qs);
+  const QUrl url(u"qrc:/main.qml"_s);
   QObject::connect(
       &engine, &QQmlApplicationEngine::objectCreated, &app,
       [url](QObject *obj, const QUrl &objUrl) {
-        if (!obj && url == objUrl)
+        if (obj == nullptr && url == objUrl)
           QCoreApplication::exit(-1);
       },
       Qt::QueuedConnection);
 
   engine.load(url);
 
-  return app.exec();
+  int result = QGuiApplication::exec();
+
+  // 清理ROS2
+  rclcpp::shutdown();
+
+  return result;
 }

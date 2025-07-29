@@ -4,7 +4,9 @@
 #include <QObject>
 #include <QVariant>
 #include <QVariantMap>
+#include <QVector>
 #include <jaka_msgs/msg/alson_event.hpp>
+#include <jaka_msgs/srv/run_project.hpp>
 #include <jaka_msgs/srv/update_camera_para.hpp> // namespace rclcpp
 #include <memory>
 #include <rclcpp/rclcpp.hpp>
@@ -48,8 +50,11 @@ public:
   Q_INVOKABLE void ConnectCamera();
   Q_INVOKABLE void RestartCamera();
   Q_INVOKABLE void UpdateCameraParam();
-  Q_INVOKABLE void loadConfig(const std::string &config_path);
+  Q_INVOKABLE void loadConfig(const QString &config_path);
   Q_INVOKABLE void saveConfig();
+  // ID: 视觉项目名称, position: 机械臂法兰末端位姿, 相对于机械臂 base
+  Q_INVOKABLE void RunProject(const QString &project_id,
+                              const QVector<float> &position);
 
   // 属性访问方法
   bool isConnected() const { return isConnected_; }
@@ -73,15 +78,11 @@ public:
   void setRunProjectTimeout(int timeout);
 
   // 配置路径查找
-  std::string findConfigFile(const std::string &filename);
+  QString findConfigFile(const QString &filename);
 
   // 连接状态管理
   void setConnected(bool connected);
   void setConnecting(bool connecting);
-
-  // ID: 视觉项目名称, position: 机械臂法兰末端位姿, 相对于机械臂 base
-  Q_INVOKABLE void RunProject(const std::string &project_id,
-                              const std::vector<float> &position);
 
 signals:
   void isConnectedChanged();
@@ -103,6 +104,8 @@ private:
   std::shared_ptr<rclcpp::Client<std_srvs::srv::Trigger>> connect_client_;
   std::shared_ptr<rclcpp::Client<std_srvs::srv::Trigger>> disconnect_client_;
   std::shared_ptr<rclcpp::Client<std_srvs::srv::Trigger>> restart_client_;
+  std::shared_ptr<rclcpp::Client<jaka_msgs::srv::RunProject>>
+      run_project_client_;
 
   // 状态监听
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr status_subscription_;

@@ -16,7 +16,11 @@ find_package(geometry_msgs REQUIRED)
 find_package(jaka_msgs REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(yaml-cpp REQUIRED)
+find_package(ament_index_cpp REQUIRED)
 find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2)
+
+# 启用 QML 语言服务器支持
+set(QT_QML_GENERATE_QMLLS_INI ON)
 
 set(PROJECT_SOURCES
     src/main.cpp
@@ -67,6 +71,7 @@ ament_target_dependencies(auto_charge PUBLIC
   sensor_msgs
   geometry_msgs
   jaka_msgs
+  ament_index_cpp
 )
 
 install(TARGETS auto_charge

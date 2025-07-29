@@ -3,7 +3,9 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
+#include <QTimer>
 #include <rclcpp/rclcpp.hpp>
+#include <thread>
 
 using namespace Qt::StringLiterals;
 
@@ -22,13 +24,13 @@ int main(int argc, char *argv[]) {
   rclcpp::init(argc, argv);
 
   // 创建AutoChargeNode实例
-  auto auto_charge_node = std::make_unique<auto_charge::AutoChargeNode>();
+  auto auto_charge_node = std::make_shared<auto_charge::AutoChargeNode>();
 
   QQmlApplicationEngine engine;
 
-  // 将AutoChargeNode注册到QML上下文
-  engine.rootContext()->setContextProperty("autoChargeNode",
-                                           auto_charge_node.get());
+  // 将CameraController直接注册到QML上下文
+  engine.rootContext()->setContextProperty(
+      "cameraController", auto_charge_node->GetCameraController());
 
   // 加载主QML文件
   const QUrl url(u"qrc:/main.qml"_s);
@@ -41,7 +43,7 @@ int main(int argc, char *argv[]) {
       Qt::QueuedConnection);
 
   engine.load(url);
-
+  std::thread ros_thread([&]() { rclcpp::spin(auto_charge_node); });
   int result = QGuiApplication::exec();
 
   // 清理ROS2

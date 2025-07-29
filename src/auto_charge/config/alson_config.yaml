@@ -3,7 +3,6 @@ alson_client:
   port: 54600
   wait_for_connection: 30
   run_project_timeout: 30
-
   charge_station: "01"
   charge_box: "Box"
   connector: "11"

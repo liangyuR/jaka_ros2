@@ -3,6 +3,7 @@
 #include <QVariant>
 #include <QVariantList>
 #include <QVariantMap>
+#include <ament_index_cpp/get_package_share_directory.hpp>
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <vector>
@@ -14,11 +15,11 @@ CameraController::CameraController(rclcpp::Node *node, QObject *parent)
     : QObject(parent), node_(node), isConnected_(false), isConnecting_(false),
       waitForConnectionTimeout_(30), runProjectTimeout_(30) {
   // 加载配置文件
-  std::string config_path = findConfigFile("alson_config.yaml");
+  const auto config_path = findConfigFile("alson_config.yaml");
   try {
     loadConfig(config_path);
     RCLCPP_INFO(node_->get_logger(), "Configuration loaded from: %s",
-                config_path.c_str());
+                config_path.toStdString().c_str());
   } catch (const std::exception &e) {
     RCLCPP_ERROR(node_->get_logger(), "Failed to load configuration: %s",
                  e.what());
@@ -37,6 +38,8 @@ CameraController::CameraController(rclcpp::Node *node, QObject *parent)
       "alson_client_node/disconnect");
   restart_client_ =
       node_->create_client<std_srvs::srv::Trigger>("alson_client_node/restart");
+  run_project_client_ = node_->create_client<jaka_msgs::srv::RunProject>(
+      "alson_client_node/run_project");
 
   if (node_ == nullptr) {
     RCLCPP_ERROR(node_->get_logger(), "CameraController: Invalid node pointer");
@@ -78,7 +81,7 @@ void CameraController::DisconnectCamera() {
 }
 
 void CameraController::ConnectCamera() {
-  RCLCPP_INFO(node_->get_logger(), "ReconnectCamera called");
+  RCLCPP_INFO(node_->get_logger(), "ConnectCamera called");
 
   if (!node_) {
     RCLCPP_ERROR(node_->get_logger(), "ConnectCamera: Node not available");
@@ -131,112 +134,59 @@ void CameraController::UpdateCameraParam() {
                  future) { handleUpdateCameraResponse(future); });
 }
 
-void CameraController::loadConfig(const std::string &config_path) {
-  RCLCPP_INFO(node_->get_logger(), "loadConfig called with: %s",
-              config_path.c_str());
-
+void CameraController::loadConfig(const QString &config_path) {
+  RCLCPP_INFO(node_->get_logger(), "loadConfig: %s",
+              config_path.toStdString().c_str());
   try {
-    // 使用 yaml-cpp 解析配置文件
-    YAML::Node config = YAML::LoadFile(config_path);
-
+    YAML::Node config = YAML::LoadFile(config_path.toStdString());
     if (!config["alson_client"]) {
-      RCLCPP_WARN(node_->get_logger(),
-                  "loadConfig: Missing 'alson_client' section in config file");
+      RCLCPP_WARN(node_->get_logger(), "Missing 'alson_client' in config");
       return;
     }
-
-    YAML::Node alson_config = config["alson_client"];
-
-    // 读取网络配置
-    if (alson_config["host"]) {
-      QString host =
-          QString::fromStdString(alson_config["host"].as<std::string>());
-      setCurrentHost(host);
-      RCLCPP_INFO(node_->get_logger(), "Loaded host: %s",
-                  host.toStdString().c_str());
-    }
-
-    if (alson_config["port"]) {
-      int port = alson_config["port"].as<int>();
-      setCurrentPort(port);
-      RCLCPP_INFO(node_->get_logger(), "Loaded port: %d", port);
-    }
-
-    // 读取超时配置
-    if (alson_config["wait_for_connection"]) {
-      waitForConnectionTimeout_ = alson_config["wait_for_connection"].as<int>();
-      RCLCPP_INFO(node_->get_logger(), "Loaded wait_for_connection timeout: %d",
-                  waitForConnectionTimeout_);
-    }
-
-    if (alson_config["run_project_timeout"]) {
-      runProjectTimeout_ = alson_config["run_project_timeout"].as<int>();
-      RCLCPP_INFO(node_->get_logger(), "Loaded run_project_timeout: %d",
-                  runProjectTimeout_);
-    }
-
-    // 读取充电站配置
-    if (alson_config["charge_station"]) {
-      QString chargeStation = QString::fromStdString(
-          alson_config["charge_station"].as<std::string>());
-      setChargeStationId(chargeStation);
-      RCLCPP_INFO(node_->get_logger(), "Loaded charge_station: %s",
-                  chargeStation.toStdString().c_str());
-    }
-
-    if (alson_config["charge_box"]) {
-      QString chargeBox =
-          QString::fromStdString(alson_config["charge_box"].as<std::string>());
-      setChargeBoxId(chargeBox);
-      RCLCPP_INFO(node_->get_logger(), "Loaded charge_box: %s",
-                  chargeBox.toStdString().c_str());
-    }
-
-    if (alson_config["connector"]) {
-      QString connector =
-          QString::fromStdString(alson_config["connector"].as<std::string>());
-      setConnectorId(connector);
-      RCLCPP_INFO(node_->get_logger(), "Loaded connector: %s",
-                  connector.toStdString().c_str());
-    }
-
-    if (alson_config["placement"]) {
-      QString placement =
-          QString::fromStdString(alson_config["placement"].as<std::string>());
-      setPlacementId(placement);
-      RCLCPP_INFO(node_->get_logger(), "Loaded placement: %s",
-                  placement.toStdString().c_str());
-    }
-
-    RCLCPP_INFO(node_->get_logger(),
-                "Configuration loaded successfully from: %s",
-                config_path.c_str());
-
-  } catch (const YAML::Exception &e) {
-    RCLCPP_WARN(node_->get_logger(), "Failed to parse YAML config file: %s",
-                e.what());
+    auto alson = config["alson_client"];
+    // clang-format off
+    if (alson["host"]) setCurrentHost(QString::fromStdString(alson["host"].as<std::string>()));
+    if (alson["port"]) setCurrentPort(alson["port"].as<int>());
+    if (alson["wait_for_connection"]) setWaitForConnectionTimeout(alson["wait_for_connection"].as<int>());
+    if (alson["run_project_timeout"]) setRunProjectTimeout(alson["run_project_timeout"].as<int>());
+    if (alson["charge_station"]) setChargeStationId(QString::fromStdString(alson["charge_station"].as<std::string>()));
+    if (alson["charge_box"]) setChargeBoxId(QString::fromStdString(alson["charge_box"].as<std::string>()));
+    if (alson["connector"]) setConnectorId(QString::fromStdString(alson["connector"].as<std::string>()));
+    if (alson["placement"]) setPlacementId(QString::fromStdString(alson["placement"].as<std::string>()));
+    // clang-format on
+    RCLCPP_INFO(node_->get_logger(), "Config loaded from: %s",
+                config_path.toStdString().c_str());
   } catch (const std::exception &e) {
-    RCLCPP_WARN(node_->get_logger(), "Failed to load config file: %s",
-                e.what());
+    RCLCPP_WARN(node_->get_logger(), "Failed to load config: %s", e.what());
   }
 }
 
-std::string CameraController::findConfigFile(const std::string &filename) {
-  std::vector<std::string> search_paths = {
-      filename, // 当前目录
-      "config/" + filename, "../config/" + filename, "../../config/" + filename,
-      "../../../config/" + filename};
+QString CameraController::findConfigFile(const QString &filename) {
+  try {
+    // 使用 ROS2 包路径查找器
+    QString pkg_share_dir = QString::fromStdString(
+        ament_index_cpp::get_package_share_directory("auto_charge"));
+    QString config_path = pkg_share_dir + "/config/" + filename;
 
-  for (const auto &path : search_paths) {
-    std::ifstream file(path);
+    // 检查文件是否存在
+    std::ifstream file(config_path.toStdString());
     if (file.good()) {
       file.close();
-      return path;
+      RCLCPP_INFO(node_->get_logger(), "Found config file at: %s",
+                  config_path.toStdString().c_str());
+      return config_path;
     }
-  }
+    // 文件不存在，抛出异常
+    QString error_msg = "Config file not found: " + config_path;
+    RCLCPP_ERROR(node_->get_logger(), "%s", error_msg.toStdString().c_str());
+    throw std::runtime_error(error_msg.toStdString());
 
-  // 如果找不到文件，返回默认路径
-  return "config/" + filename;
+  } catch (const std::exception &e) {
+    QString error_msg =
+        "Failed to find config file '" + filename + "': " + e.what();
+    RCLCPP_ERROR(node_->get_logger(), "%s", error_msg.toStdString().c_str());
+    throw std::runtime_error(error_msg.toStdString());
+  }
 }
 
 void CameraController::saveConfig() {
@@ -265,18 +215,18 @@ void CameraController::saveConfig() {
     config["alson_client"] = alson_client;
 
     // 查找配置文件路径
-    std::string config_path = findConfigFile("alson_config.yaml");
-    std::ofstream file(config_path);
+    const auto config_path = findConfigFile("alson_config.yaml");
+    std::ofstream file(config_path.toStdString());
     if (file.is_open()) {
       file << config;
       file.close();
       RCLCPP_INFO(node_->get_logger(),
                   "Configuration saved successfully to: %s",
-                  config_path.c_str());
+                  config_path.toStdString().c_str());
     } else {
       RCLCPP_WARN(node_->get_logger(),
                   "Failed to open config file for writing: %s",
-                  config_path.c_str());
+                  config_path.toStdString().c_str());
     }
 
   } catch (const YAML::Exception &e) {
@@ -306,71 +256,35 @@ void CameraController::handleUpdateCameraResponse(
                 "UpdateCameraParam service call failed: %s", e.what());
   }
 }
-
-void CameraController::RunProject(const std::string &project_id,
-                                  const std::vector<float> &position) {
-  std::ostringstream pos_stream;
-  for (size_t i = 0; i < position.size(); ++i) {
-    pos_stream << position[i];
-    if (i != position.size() - 1) {
-      pos_stream << ", ";
-    }
-  }
-  RCLCPP_INFO(node_->get_logger(),
-              "RunProject called with: project_id=%s, position=[%s]",
-              project_id.c_str(), pos_stream.str().c_str());
-
+void CameraController::RunProject(const QString &project_id,
+                                  const QVector<float> &position) {
   if (node_ == nullptr) {
     RCLCPP_WARN(rclcpp::get_logger("camera_controller"),
                 "RunProject: Node not available");
     return;
   }
-
-  // 检查参数完整性
-  if (project_id.empty()) {
+  if (project_id.isEmpty() || position.size() != 6) {
     RCLCPP_WARN(rclcpp::get_logger("camera_controller"),
-                "RunProject: Missing required parameters");
+                "RunProject: Invalid parameters");
     return;
   }
 
-  // 验证fl_tcp_position格式
-  if (position.size() != 6) {
-    RCLCPP_WARN(rclcpp::get_logger("camera_controller"),
-                "RunProject: fl_tcp_position must be an array of 6 elements");
-    return;
-  }
-
-  // TODO: 实现RunProject服务调用
-  // 这里需要根据实际的RunProject.srv定义来实现
-  // 示例代码：
-  /*
   auto request = std::make_shared<jaka_msgs::srv::RunProject::Request>();
-  request->project_id = project_id;
-
-  // 转换fl_tcp_position
-  request->fl_tcp_position = position;
-
-  // 异步调用服务
-  auto future = run_project_client_->async_send_request(request);
-
-  std::thread([this, future]() {
-    try {
-      auto response = future.get();
-
-      // 处理 response
-      RCLCPP_INFO(node_->get_logger(), "RunProject result: success=%d,
-  message=%s, status_code=%d", response->success, response->message.c_str(),
-  response->status_code);
-
-    } catch (const std::exception& e) {
-      RCLCPP_WARN(rclcpp::get_logger("camera_controller"), "RunProject service
-  call failed: %s", e.what());
-    }
-  }).detach();
-  */
-
-  // 临时返回成功状态（实际实现时需要替换上面的TODO代码）
-  RCLCPP_INFO(node_->get_logger(), "RunProject called successfully");
+  request->project_id = project_id.toStdString();
+  request->fl_tcp_position.assign(position.begin(), position.end());
+  run_project_client_->async_send_request(
+      request,
+      [this](rclcpp::Client<jaka_msgs::srv::RunProject>::SharedFuture future) {
+        try {
+          auto response = future.get();
+          RCLCPP_INFO(node_->get_logger(),
+                      "RunProject: message=%s, status_code=%d",
+                      response->message.c_str(), response->status_code);
+        } catch (const std::exception &e) {
+          RCLCPP_ERROR(rclcpp::get_logger("camera_controller"),
+                       "RunProject service call failed: %s", e.what());
+        }
+      });
 }
 
 void CameraController::handleConnectResponse(
@@ -453,8 +367,6 @@ void CameraController::initializeStatusMonitoring() {
   //                              [this]() { CheckCameraStatus(); });
 
   qDebug() << "Status monitoring initialized";
-
-  ConnectCamera(); // TODO(@liangyu) for test
 }
 
 void CameraController::handleStatusMessage(

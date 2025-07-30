@@ -26,8 +26,11 @@ set(PROJECT_SOURCES
     src/main.cpp
     src/auto_charge_node.cpp
     src/camera_controller.cpp
+    src/robot_manager.cpp
     include/auto_charge/auto_charge_node.h
     include/auto_charge/camera_controller.h
+    include/auto_charge/robot_manager.h
+    include/auto_charge/robot_manager_utils.h
 )
 
 configure_file(

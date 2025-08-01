@@ -12,11 +12,6 @@ RobotManager::RobotManager(QObject *parent) : QObject(parent) {
 
   setupClients();
   setupSubscribers();
-
-  std::thread([this]() {
-    std::this_thread::sleep_for(std::chrono::seconds(5));
-    this->delayInit();
-  }).detach();
 }
 
 RobotManager::~RobotManager() {
@@ -75,8 +70,14 @@ void RobotManager::setupSubscribers() {
         tio_key_ = msg->tio_key;
         timestamp_ = msg->timestamp;
 
+        // 更新最后消息时间
+        last_message_time_ = std::chrono::steady_clock::now();
         emit statusChanged();
       });
+
+  // 启动话题连接状态监控定时器
+  topic_monitor_timer_ = node_->create_wall_timer(
+      std::chrono::seconds(1), [this]() { this->checkTopicConnection(); });
 }
 
 // 参数操作辅助方法
@@ -291,6 +292,65 @@ bool RobotManager::resetSensor() {
 
   RCLCPP_INFO(node_->get_logger(), "Reset sensor: %s", result->message.c_str());
   return true;
+}
+
+void RobotManager::resetRobotStatus() {
+  // 重置所有机械臂状态变量为默认值
+  errcode_ = 0;
+  inpos_ = false;
+  powered_on_ = false;
+  enabled_ = false;
+  rapidrate_ = 0.0;
+  protective_stop_ = false;
+  emergency_stop_ = false;
+  connected_ = false; // 话题断开时，连接状态也应该为false
+  cartesiantran_position_.clear();
+  joint_position_.clear();
+  current_tool_id_ = 0;
+  current_user_id_ = 0;
+  on_soft_limit_ = false;
+  drag_status_ = false;
+  is_socket_connect_ = false;
+  dout_.clear();
+  din_.clear();
+  ain_.clear();
+  aout_.clear();
+  tio_dout_.clear();
+  tio_din_.clear();
+  tio_ain_.clear();
+  tio_key_.clear();
+
+  // 发出状态变化信号，通知UI更新
+  emit statusChanged();
+
+  RCLCPP_INFO(node_->get_logger(),
+              "Robot status variables reset due to topic disconnection");
+}
+
+void RobotManager::checkTopicConnection() {
+  auto now = std::chrono::steady_clock::now();
+  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                     now - last_message_time_)
+                     .count();
+
+  bool should_be_connected = elapsed < topic_timeout_ms_;
+
+  if (topic_connected_ != should_be_connected) {
+    topic_connected_ = should_be_connected;
+    emit topicConnectionChanged();
+
+    if (!topic_connected_) {
+      RCLCPP_WARN(node_->get_logger(),
+                  "Robot status topic timeout after %ld ms, topic disconnected",
+                  elapsed);
+
+      // 重置机械臂状态变量，因为无法获取真实状态
+      resetRobotStatus();
+
+    } else {
+      RCLCPP_INFO(node_->get_logger(), "Robot status topic reconnected");
+    }
+  }
 }
 
 } // namespace auto_charge

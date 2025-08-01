@@ -553,19 +553,20 @@ bool RobotController::performRobotInitialization() {
   try {
     // 关闭伺服模式
     robot_.servo_move_enable(false); // NOLINT
-    std::this_thread::sleep_for(500ms);
 
+    std::this_thread::sleep_for(500ms);
     // 设置滤波器参数
     robot_.servo_move_use_joint_LPF(0.5);
 
     // 上电并启用
+    RCLCPP_INFO(this->get_logger(), "Powering on robot, need 8s");
     robot_.power_on();
-    std::this_thread::sleep_for(8s);
+    RCLCPP_INFO(this->get_logger(), "Robot powered on");
+
+    RCLCPP_INFO(this->get_logger(), "Enabling robot, need 4s");
     robot_.enable_robot();
-    std::this_thread::sleep_for(4s);
-
+    RCLCPP_INFO(this->get_logger(), "Robot enabled");
     return true;
-
   } catch (const std::exception &e) {
     RCLCPP_ERROR(this->get_logger(),
                  "Exception during robot initialization: %s", e.what());

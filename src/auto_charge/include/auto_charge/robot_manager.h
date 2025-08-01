@@ -71,6 +71,9 @@ public:
   Q_PROPERTY(QVariant tioAin READ getTioAin NOTIFY statusChanged)
   Q_PROPERTY(QVariant tioKey READ getTioKey NOTIFY statusChanged)
   Q_PROPERTY(QVariant timestamp READ getTimestamp NOTIFY statusChanged)
+  Q_PROPERTY(
+      bool topicConnected READ getTopicConnected NOTIFY topicConnectionChanged)
+  Q_PROPERTY(int topicTimeoutMs READ getTopicTimeoutMs WRITE setTopicTimeoutMs)
 
   void setIp(const QString &ip); // NOLINT
   QString getIp() { return QString::fromStdString(ip_); }
@@ -163,6 +166,15 @@ public:
   }
   QVariant getTimestamp() const { return QVariant::fromValue(timestamp_); }
 
+  // 话题连接状态相关
+  bool getTopicConnected() const { return topic_connected_; }
+  int getTopicTimeoutMs() const { return topic_timeout_ms_; }
+  void setTopicTimeoutMs(int timeout_ms) {
+    topic_timeout_ms_ = timeout_ms;
+    emit topicConnectionChanged();
+  }
+
+  Q_INVOKABLE void delayInit();
   Q_INVOKABLE bool connect();
   Q_INVOKABLE bool disconnect();
   Q_INVOKABLE void updateRobotConnectConfig();
@@ -176,6 +188,7 @@ public:
 signals:
   void ipChanged();
   void statusChanged();
+  void topicConnectionChanged();
 
 private:
   std::shared_ptr<rclcpp::Node> node_;
@@ -220,11 +233,17 @@ private:
   builtin_interfaces::msg::Time timestamp_;
   std::string ip_{"192.168.1.122"};
 
-  void delayInit();
+  // 话题连接状态监控
+  bool topic_connected_{false};
+  int topic_timeout_ms_{5000}; // 默认5秒超时
+  std::chrono::steady_clock::time_point last_message_time_;
+  rclcpp::TimerBase::SharedPtr topic_monitor_timer_;
 
   // 私有方法
   void setupClients();
   void setupSubscribers();
+  void checkTopicConnection();
+  void resetRobotStatus();
 
   bool setParameter(const std::string &name, const std::string &value);
   std::string getParameter(const std::string &name);

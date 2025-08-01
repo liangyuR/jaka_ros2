@@ -10,13 +10,6 @@ int main(int argc, char **argv) {
 
   auto controller = std::make_shared<robot_controller::RobotController>();
 
-  // 初始化机器人
-  if (!controller->InitializeRobot()) {
-    RCLCPP_ERROR(controller->get_logger(),
-                 "Failed to initialize robot. Exiting.");
-    return 1;
-  }
-
   // 启动控制器
   controller->StartController();
 

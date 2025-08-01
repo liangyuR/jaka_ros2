@@ -17,20 +17,17 @@ int main(int argc, char *argv[]) {
   QGuiApplication::setApplicationVersion("0.1.0");
   QGuiApplication::setOrganizationName("Auto Charge Team");
 
-  // 设置Material样式
   QQuickStyle::setStyle("Material");
 
-  // 初始化ROS2
   rclcpp::init(argc, argv);
 
-  // 创建AutoChargeNode实例
   auto auto_charge_node = std::make_shared<auto_charge::AutoChargeNode>();
 
   QQmlApplicationEngine engine;
-
-  // 将CameraController直接注册到QML上下文
-  engine.rootContext()->setContextProperty(
-      "cameraController", auto_charge_node->GetCameraController());
+  // clang-format off
+  engine.rootContext()->setContextProperty("cameraController", auto_charge_node->GetCameraController());
+  engine.rootContext()->setContextProperty("robotManager", auto_charge_node->GetRobotManager());
+  // clang-format on
 
   // 加载主QML文件
   const QUrl url(u"qrc:/main.qml"_s);
@@ -43,10 +40,16 @@ int main(int argc, char *argv[]) {
       Qt::QueuedConnection);
 
   engine.load(url);
-  std::thread ros_thread([&]() { rclcpp::spin(auto_charge_node); });
+
+  // 创建多线程执行器来管理多个节点
+  auto executor = std::make_shared<rclcpp::executors::MultiThreadedExecutor>();
+  executor->add_node(auto_charge_node);
+  executor->add_node(auto_charge_node->GetCameraController()->getNode());
+  executor->add_node(auto_charge_node->GetRobotManager()->getNode());
+
+  std::thread ros_thread([&]() { executor->spin(); });
   int result = QGuiApplication::exec();
 
-  // 清理ROS2
   rclcpp::shutdown();
 
   return result;

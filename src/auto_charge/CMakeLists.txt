@@ -30,7 +30,6 @@ set(PROJECT_SOURCES
     include/auto_charge/auto_charge_node.h
     include/auto_charge/camera_controller.h
     include/auto_charge/robot_manager.h
-    include/auto_charge/robot_manager_utils.h
 )
 
 configure_file(

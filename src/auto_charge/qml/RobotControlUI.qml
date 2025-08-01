@@ -1,28 +1,16 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import QtQuick.Controls.Material 2.15
-import QtQuick.Layouts 1.15
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Controls.Material
+import QtQuick.Layouts
 import "./components"
 
 Item {
     id: robot_control_ui
-    
-    // 信号定义
-    signal connectRobot(string ip, int port)
-    signal disconnectRobot()
-    signal enableRobot()
-    signal disableRobot()
-    signal clearError()
-    signal resetSensor()
-    
-    // 属性
-    property string currentIp: "127.0.0.1"
-    property int currentPort: 8080
-    property bool isConnected: false
-    property bool isConnecting: false
-    property bool isEnabled: false
-    property bool hasError: false
-    
+
+    Component.onCompleted: {
+        
+    }
+
     // 主布局
     ScrollView {
         anchors.fill: parent
@@ -48,53 +36,101 @@ Item {
                 Layout.rightMargin: 24
                 Material.elevation: 1
                 
-                RowLayout {
+                ColumnLayout {
                     anchors.fill: parent
                     spacing: 16
                     
-                    // 状态图标
-                    Rectangle {
-                        width: 16
-                        height: 16
-                        radius: 8
-                        color: isConnected ? Material.Green : Material.Red
+                    // 状态图标和文本
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 16
                         
-                        BusyIndicator {
-                            anchors.centerIn: parent
-                            width: 12
-                            height: 12
-                            running: isConnecting
-                            visible: isConnecting
+                        // 状态图标
+                        Rectangle {
+                            width: 16
+                            height: 16
+                            radius: 8
+                            color: robotManager.connected ? Material.Green : Material.Red
+                            
+                            BusyIndicator {
+                                anchors.centerIn: parent
+                                width: 12
+                                height: 12
+                                running: robotManager.connecting
+                                visible: robotManager.connecting
+                            }
+                        }
+                        
+                        // 状态文本
+                        Label {
+                            text: {
+                                if (robotManager.connecting) return "连接中..."
+                                else if (robotManager.connected) return "已连接"
+                                else return "未连接"
+                            }
+                            font.pixelSize: 16
+                            font.weight: Font.Medium
+                        }
+                        
+                        Item { Layout.fillWidth: true }
+                        
+                        // 使能状态
+                        Label {
+                            text: robotManager.enabled ? "已使能" : "未使能"
+                            font.pixelSize: 12
+                            color: robotManager.enabled ? Material.Green : Material.Grey
+                            visible: robotManager.connected
+                        }
+                        
+                        // 错误状态
+                        Label {
+                            text: "有错误"
+                            font.pixelSize: 12
+                            color: Material.Red
+                            visible: robotManager.error
                         }
                     }
                     
-                    // 状态文本
-                    Label {
-                        text: {
-                            if (isConnecting) return "连接中..."
-                            else if (isConnected) return "已连接"
-                            else return "未连接"
+                    // 详细状态信息
+                    GridLayout {
+                        Layout.fillWidth: true
+                        columns: 2
+                        rowSpacing: 8
+                        columnSpacing: 16
+                        
+                        Label { text: "电源状态:"; font.pixelSize: 12; color: Material.Grey }
+                        Label { text: robotManager.poweredOn ? "已上电" : "未上电"; font.pixelSize: 12 }
+                        
+                        Label { text: "运动倍率:"; font.pixelSize: 12; color: Material.Grey }
+                        Label { text: robotManager.rapidrate; font.pixelSize: 12 }
+                        
+                        Label { text: "碰撞状态:"; font.pixelSize: 12; color: Material.Grey }
+                        Label { 
+                            text: robotManager.protectiveStop; 
+                            font.pixelSize: 12
+                            color: robotManager.protectiveStop ? Material.Red : Material.Green
                         }
-                        font.pixelSize: 16
-                        font.weight: Font.Medium
-                    }
-                    
-                    Item { Layout.fillWidth: true }
-                    
-                    // 使能状态
-                    Label {
-                        text: isEnabled ? "已使能" : "未使能"
-                        font.pixelSize: 12
-                        color: isEnabled ? Material.Green : Material.Grey
-                        visible: isConnected
-                    }
-                    
-                    // 错误状态
-                    Label {
-                        text: "有错误"
-                        font.pixelSize: 12
-                        color: Material.Red
-                        visible: isConnected && hasError
+                        
+                        Label { text: "使能状态:"; font.pixelSize: 12; color: Material.Grey }
+                        Label { 
+                            text: robotManager.enabled ? "已使能" : "未使能"; 
+                            font.pixelSize: 12
+                            color: robotManager.enabled ? Material.Green : Material.Red
+                        }
+
+                        Label { text: "急停状态:"; font.pixelSize: 12; color: Material.Grey }
+                        Label { 
+                            text: robotManager.emergencyStop ? "已急停" : "未急停"; 
+                            font.pixelSize: 12
+                            color: robotManager.emergencyStop ? Material.Red : Material.Green
+                        }
+
+                        Label { text: "是否到位:"; font.pixelSize: 12; color: Material.Grey }
+                        Label { 
+                            text: robotManager.inpos ? "到位" : "未到位"; 
+                            font.pixelSize: 12
+                            color: robotManager.inpos ? Material.Green : Material.Red
+                        }
                     }
                 }
             }
@@ -106,13 +142,33 @@ Item {
                 Layout.rightMargin: 24
                 Material.elevation: 1
 
-                NetworkConfigPane {
-                    id: netConfig
-                    ip: currentIp
-                    port: currentPort
-                    onConfigChanged: function(ip, port) {
-                        currentIp = ip
-                        currentPort = port
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: 12
+
+                    NetworkConfigPane {
+                        id: netConfig
+                        ip: robotManager.robot_ip
+                        port_visible: false
+                        connectionTimeout_visible: false
+                        connectionTimeout: 0 // 不使用超时限制
+                        port: 0 // jaka robot 不使用端口
+                        Layout.fillWidth: true
+                    }
+
+                    RowLayout {
+                        Layout.alignment: Qt.AlignRight
+                        Layout.fillWidth: true
+
+                        Item { Layout.fillWidth: true }
+
+                        Button {
+                            text: "更新"
+                            onClicked: {
+                                robotManager.ip = netConfig.ip
+                                robotManager.updateRobotConnectConfig()
+                            }
+                        }
                     }
                 }
             }
@@ -138,15 +194,15 @@ Item {
                     
                     // 连接/断开按钮
                     Button {
-                        text: isConnected ? "断开连接" : "连接"
-                        enabled: !isConnecting
-                        Material.background: isConnected ? Material.Red : Material.Green
+                        text: robotManager.connected ? "断开连接" : "连接"
+                        enabled: !robotManager.connecting
+                        Material.background: robotManager.connected ? Material.Red : Material.Green
                         Material.foreground: "white"
                         onClicked: {
-                            if (isConnected) {
-                                disconnectRobot()
+                            if (robotManager.connected) {
+                                robotManager.disconnect()
                             } else {
-                                connectRobot(currentIp, currentPort)
+                                robotManager.connect()
                             }
                         }
                     }
@@ -171,18 +227,26 @@ Item {
                     }
 
                     Item { Layout.fillWidth: true }
+                    // 上下电
+                    Button {
+                        text: robotManager.poweredOn ? "下电" : "上电"
+                        enabled: robotManager.connected && !robotManager.connecting
+                        Material.background: robotManager.poweredOn ? Material.Orange : Material.Green
+                        Material.foreground: "white"
+                        onClicked: robotManager.power(!robotManager.poweredOn)
+                    }
 
                     // 上下使能（单按钮切换）
                     Button {
-                        text: isEnabled ? "下使能" : "上使能"
-                        enabled: isConnected && !isConnecting
-                        Material.background: isEnabled ? Material.Orange : Material.Green
+                        text: robotManager.enabled ? "下使能" : "上使能"
+                        enabled: robotManager.connected && !robotManager.connecting
+                        Material.background: robotManager.enabled ? Material.Orange : Material.Green
                         Material.foreground: "white"
                         onClicked: {
-                            if (isEnabled) {
-                                disableRobot()
+                            if (robotManager.enabled) {
+                                robotManager.enable(false)
                             } else {
-                                enableRobot()
+                                robotManager.enable(true)
                             }
                         }
                     }
@@ -190,44 +254,22 @@ Item {
                     // 清错
                     Button {
                         text: "清错"
-                        enabled: isConnected && hasError && !isConnecting
+                        enabled: robotManager.connected && robotManager.error && !robotManager.connecting
                         Material.background: Material.Red
                         Material.foreground: "white"
-                        onClicked: clearError()
+                        onClicked: robotManager.clearError()
                     }
 
                     // 重置传感器
                     Button {
                         text: "重置传感器"
-                        enabled: isConnected && !isConnecting
+                        enabled: robotManager.connected && !robotManager.connecting
                         Material.background: Material.Blue
                         Material.foreground: "white"
-                        onClicked: resetSensor()
+                        onClicked: robotManager.resetSensor()
                     }
                 }
             }
         }
-    }
-    
-    // 更新连接状态
-    function updateConnectionStatus(connected, connecting) {
-        isConnected = connected
-        isConnecting = connecting
-    }
-    
-    // 更新使能状态
-    function updateEnableStatus(enabled) {
-        isEnabled = enabled
-    }
-    
-    // 更新错误状态
-    function updateErrorStatus(hasError) {
-        this.hasError = hasError
-    }
-    
-    // 更新配置
-    function updateConfig(ip, port) {
-        currentIp = ip
-        currentPort = port
     }
 }

@@ -9,6 +9,9 @@ ColumnLayout {
     property int connectionTimeout: 30
     signal configChanged(string ip, int port, int timeout)
 
+    property bool port_visible: true
+    property bool connectionTimeout_visible: true
+
     spacing: 16
 
     Label {
@@ -42,8 +45,12 @@ ColumnLayout {
                     let cleaned = text.replace(/[^\d.]/g, '');
                     let parts = cleaned.split('.');
                     for (let i = 0; i < parts.length; i++) {
+                        // 限制每段最大为255
                         if (parts[i].length > 3) {
                             parts[i] = parts[i].substring(0, 3);
+                        }
+                        if (parseInt(parts[i]) > 255) {
+                            parts[i] = "255";
                         }
                     }
                     let result = parts.join('.');
@@ -51,9 +58,8 @@ ColumnLayout {
                         ipTextField.text = result;
                         ipTextField.cursorPosition = result.length;
                     }
+                    ip = ipTextField.text;
                 }
-                ip = ipTextField.text;
-                configChanged(ip, port, connectionTimeout);
             }
 
             Keys.onPressed: function (event) {
@@ -69,8 +75,10 @@ ColumnLayout {
     }
 
     // 端口配置
+    
     RowLayout {
         Layout.fillWidth: true
+        visible: port_visible
 
         Label {
             text: "端口"
@@ -94,6 +102,7 @@ ColumnLayout {
     // 连接超时
     RowLayout {
         Layout.fillWidth: true
+        visible: connectionTimeout_visible
 
         Label {
             text: "连接超时"

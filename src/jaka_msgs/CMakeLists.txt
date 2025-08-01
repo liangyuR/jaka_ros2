@@ -17,9 +17,11 @@ find_package(std_srvs REQUIRED)
 # Generate messages in the 'msg' folder
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/RobotMsg.msg"
+  "msg/RobotStatus.msg"
   "msg/AlsonEvent.msg"
 
   # JAKA Robot
+  "srv/RobotControl.srv"
   "srv/Move.srv"
   "srv/ServoMoveEnable.srv"
   "srv/ServoMove.srv"

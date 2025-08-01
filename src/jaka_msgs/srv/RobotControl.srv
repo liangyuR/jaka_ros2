@@ -1,0 +1,20 @@
+# 统一的机器人控制服务
+# 支持连接/断开、上下电、使能/下使能等基本操作
+
+# 请求
+uint8 command                    # 命令类型
+# 命令定义：
+# 1 = CONNECT
+# 2 = DISCONNECT  
+# 3 = POWER_ON
+# 4 = POWER_OFF
+# 5 = ENABLE
+# 6 = DISABLE
+# 7 = RESTART
+# 8 = CLEAR_ERROR
+# 9 = RESET_SENSOR
+
+---
+# 响应
+bool success                     # 操作是否成功
+string message                   # 响应消息

@@ -4,7 +4,6 @@
 robot:
   default_model: "zu12"
   default_ip: "192.168.1.100"
-  connection_timeout: 10.0
   
 # 运动规划参数
 planning:

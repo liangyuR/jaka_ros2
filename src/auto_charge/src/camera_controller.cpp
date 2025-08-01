@@ -11,9 +11,10 @@
 
 namespace auto_charge {
 
-CameraController::CameraController(rclcpp::Node *node, QObject *parent)
-    : QObject(parent), node_(node), isConnected_(false), isConnecting_(false),
+CameraController::CameraController(QObject *parent)
+    : QObject(parent), isConnected_(false), isConnecting_(false),
       waitForConnectionTimeout_(30), runProjectTimeout_(30) {
+  node_ = std::make_shared<rclcpp::Node>("camera_controller");
   // 加载配置文件
   const auto config_path = findConfigFile("alson_config.yaml");
   try {

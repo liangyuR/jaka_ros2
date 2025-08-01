@@ -42,7 +42,7 @@ class CameraController : public QObject {
                  setRunProjectTimeout NOTIFY runProjectTimeoutChanged)
 
 public:
-  explicit CameraController(rclcpp::Node *node, QObject *parent = nullptr);
+  explicit CameraController(QObject *parent = nullptr);
   ~CameraController() override;
 
   // QML可调用的方法
@@ -84,6 +84,9 @@ public:
   void setConnected(bool connected);
   void setConnecting(bool connecting);
 
+  // 获取节点
+  std::shared_ptr<rclcpp::Node> getNode() const { return node_; }
+
 signals:
   void isConnectedChanged();
   void isConnectingChanged();
@@ -97,8 +100,8 @@ signals:
   void runProjectTimeoutChanged();
 
 private:
-  // 使用auto_charge节点的ROS2客户端
-  rclcpp::Node *node_;
+  // 使用独立的ROS2节点
+  std::shared_ptr<rclcpp::Node> node_;
   std::shared_ptr<rclcpp::Client<jaka_msgs::srv::UpdateCameraPara>>
       update_camera_para_client_;
   std::shared_ptr<rclcpp::Client<std_srvs::srv::Trigger>> connect_client_;

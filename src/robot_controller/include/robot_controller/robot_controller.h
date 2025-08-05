@@ -69,14 +69,9 @@ private:
   rclcpp_action::Server<control_msgs::action::FollowJointTrajectory>::SharedPtr
       action_server_;
 
-  // 统一控制服务
+  // 基础控制服务
   rclcpp::Service<jaka_msgs::srv::RobotControl>::SharedPtr
       robot_control_service_;
-
-  // 高级操作服务
-  rclcpp::Service<std_srvs::srv::Empty>::SharedPtr insert_gun_service_;
-  rclcpp::Service<std_srvs::srv::Empty>::SharedPtr pull_gun_service_;
-  rclcpp::Service<std_srvs::srv::Empty>::SharedPtr connect_gun_service_;
 
   // 定时器
   rclcpp::TimerBase::SharedPtr joint_states_timer_;
@@ -140,17 +135,6 @@ private:
   void handleResetSensorCommand(
       const std::shared_ptr<jaka_msgs::srv::RobotControl::Request> &request,
       std::shared_ptr<jaka_msgs::srv::RobotControl::Response> &response);
-
-  // 高级操作服务回调
-  void handleInsertGunService(
-      const std::shared_ptr<std_srvs::srv::Empty::Request> &request,
-      std::shared_ptr<std_srvs::srv::Empty::Response> &response);
-  void handlePullGunService(
-      const std::shared_ptr<std_srvs::srv::Empty::Request> &request,
-      std::shared_ptr<std_srvs::srv::Empty::Response> &response);
-  void handleConnectGunService(
-      const std::shared_ptr<std_srvs::srv::Empty::Request> &request,
-      std::shared_ptr<std_srvs::srv::Empty::Response> &response);
 
   // 高级操作实现
   bool insertGun();

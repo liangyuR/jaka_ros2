@@ -27,6 +27,7 @@ int main(int argc, char *argv[]) {
   // clang-format off
   engine.rootContext()->setContextProperty("cameraController", auto_charge_node->GetCameraController());
   engine.rootContext()->setContextProperty("robotManager", auto_charge_node->GetRobotManager());
+  engine.rootContext()->setContextProperty("taskManager", auto_charge_node->GetTaskManager());
   // clang-format on
 
   // 加载主QML文件

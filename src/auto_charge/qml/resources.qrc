@@ -10,6 +10,7 @@
         <file>components/IPTextField.qml</file>
         <file>components/NetworkConfigPane.qml</file>
         <file>components/StatusBar.qml</file>
+        <file>components/RotatingButton.qml</file>
         <file>styles/TouchStyle.qml</file>
         <file>robot_pages/BaseSettingPage.qml</file>
         <file>robot_pages/StatusPage.qml</file>

@@ -46,6 +46,8 @@ public:
   Q_PROPERTY(QString ip READ getIp WRITE setIp NOTIFY ipChanged)
   Q_PROPERTY(bool connected READ getConnected NOTIFY statusChanged)
   Q_PROPERTY(bool connecting READ getConnecting NOTIFY statusChanged)
+  Q_PROPERTY(bool powering READ getPowering NOTIFY statusChanged)
+  Q_PROPERTY(bool enabling READ getEnabling NOTIFY statusChanged)
   Q_PROPERTY(bool enabled READ getEnabled NOTIFY statusChanged)
   Q_PROPERTY(bool error READ getError NOTIFY statusChanged)
   Q_PROPERTY(int errcode READ getErrcode NOTIFY statusChanged)
@@ -79,6 +81,8 @@ public:
   QString getIp() { return QString::fromStdString(ip_); }
   bool getConnected() const { return connected_; }
   bool getConnecting() const { return connecting_; }
+  bool getPowering() const { return powering_; }
+  bool getEnabling() const { return enabling_; }
   bool getEnabled() const { return enabled_; }
   bool getError() const { return errcode_ != 0; }
   bool getInpos() const { return inpos_; }
@@ -206,6 +210,8 @@ private:
 
   bool connecting_{false};
   bool connected_{false};
+  bool powering_{false};
+  bool enabling_{false};
 
   // RobotStatus 相关状态变量
   int32_t errcode_{0};
@@ -240,13 +246,13 @@ private:
   rclcpp::TimerBase::SharedPtr topic_monitor_timer_;
 
   // 私有方法
-  void setupClients();
-  void setupSubscribers();
-  void checkTopicConnection();
-  void resetRobotStatus();
+  void SetupClients_();
+  void SetupSubscribers_();
+  void CheckTopicConnection_();
+  void ResetRobotStatus_();
 
-  bool setParameter(const std::string &name, const std::string &value);
-  std::string getParameter(const std::string &name);
+  bool SetParameter_(const std::string &name, const std::string &value);
+  std::string GetParameter_(const std::string &name);
 };
 } // namespace auto_charge
 

@@ -8,24 +8,10 @@ import "./components"
 ApplicationWindow {
     id: window
     visible: true
-    width: 1920
-    height: 1080
+    width: 1280
+    height: 720
     title: "Auto Charge Settings"
     color: Material.background
-    
-    Component.onCompleted: {
-        console.log("Material.primary:", Material.primary)
-        console.log("Material.onPrimary:", Material.onPrimary)
-        console.log("Material.accent:", Material.accent)
-        console.log("Material.onAccent:", Material.onAccent)
-        console.log("Material.background:", Material.background)
-        console.log("Material.foreground:", Material.foreground)
-        console.log("Material.surface:", Material.surface)
-        console.log("Material.elevation:", Material.elevation)
-        console.log("Material.radius:", Material.radius)
-        console.log("Material.shadow:", Material.shadow)
-    }
-
     // 主布局
     ColumnLayout {
         anchors.fill: parent

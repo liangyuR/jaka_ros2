@@ -10,8 +10,8 @@ RobotManager::RobotManager(QObject *parent) : QObject(parent) {
   node_ = std::make_shared<rclcpp::Node>("robot_manager");
   RCLCPP_INFO(node_->get_logger(), "Robot Manager initialized");
 
-  setupClients();
-  setupSubscribers();
+  SetupClients_();
+  SetupSubscribers_();
 }
 
 RobotManager::~RobotManager() {
@@ -19,13 +19,15 @@ RobotManager::~RobotManager() {
 }
 
 void RobotManager::delayInit() {
-  // 获取并更新 IP 参数
-  ip_ = getParameter("robot_ip");
-  emit ipChanged();
-  RCLCPP_INFO(node_->get_logger(), "Robot Manager delayInit: %s", ip_.c_str());
+  std::thread([this]() {
+    ip_ = GetParameter_("robot_ip");
+    emit ipChanged();
+    RCLCPP_INFO(node_->get_logger(), "Robot Manager delayInit: %s",
+                ip_.c_str());
+  }).detach();
 }
 
-void RobotManager::setupClients() {
+void RobotManager::SetupClients_() {
   // 参数服务客户端
   set_params_client_ = node_->create_client<rcl_interfaces::srv::SetParameters>(
       "/robot_controller/set_parameters");
@@ -39,7 +41,7 @@ void RobotManager::setupClients() {
       "/robot_controller/control");
 }
 
-void RobotManager::setupSubscribers() {
+void RobotManager::SetupSubscribers_() {
   // 订阅机器人状态
   robot_status_sub_ = node_->create_subscription<jaka_msgs::msg::RobotStatus>(
       "/robot_controller/detailed_status", 10,
@@ -77,12 +79,12 @@ void RobotManager::setupSubscribers() {
 
   // 启动话题连接状态监控定时器
   topic_monitor_timer_ = node_->create_wall_timer(
-      std::chrono::seconds(1), [this]() { this->checkTopicConnection(); });
+      std::chrono::seconds(1), [this]() { this->CheckTopicConnection_(); });
 }
 
 // 参数操作辅助方法
-bool RobotManager::setParameter(const std::string &name,
-                                const std::string &value) {
+bool RobotManager::SetParameter_(const std::string &name,
+                                 const std::string &value) {
   if (!set_params_client_->wait_for_service(std::chrono::seconds(5))) {
     RCLCPP_ERROR(node_->get_logger(), "Set parameters service not available");
     return false;
@@ -116,7 +118,7 @@ bool RobotManager::setParameter(const std::string &name,
   return true;
 }
 
-std::string RobotManager::getParameter(const std::string &name) {
+std::string RobotManager::GetParameter_(const std::string &name) {
   if (!get_params_client_->wait_for_service(std::chrono::seconds(5))) {
     RCLCPP_ERROR(node_->get_logger(), "Get parameters service not available");
     return "";
@@ -150,151 +152,197 @@ bool RobotManager::connect() {
   connecting_ = true;
   emit statusChanged();
 
-  auto request = std::make_shared<jaka_msgs::srv::RobotControl::Request>();
-  request->command = CMD_CONNECT;
+  std::thread([this]() {
+    QScopeGuard guard([this]() {
+      connecting_ = false;
+      emit statusChanged();
+    });
 
-  auto future = robot_control_client_->async_send_request(request);
-  bool success =
-      (future.wait_for(std::chrono::seconds(20)) == std::future_status::ready);
+    auto request = std::make_shared<jaka_msgs::srv::RobotControl::Request>();
+    request->command = CMD_CONNECT;
 
-  connecting_ = false;
-  connected_ = success;
-  RCLCPP_INFO(node_->get_logger(), "Connect: %s",
-              success ? "Success" : "Failed");
-  emit statusChanged();
-  return success;
+    auto future = robot_control_client_->async_send_request(request);
+    const auto success = (future.wait_for(std::chrono::seconds(20)) ==
+                          std::future_status::ready);
+    RCLCPP_INFO(node_->get_logger(), "Connect: %s",
+                success ? "Success" : "Failed");
+  }).detach();
+
+  return true;
 }
 
 bool RobotManager::disconnect() {
   connecting_ = true;
   emit statusChanged();
 
-  auto request = std::make_shared<jaka_msgs::srv::RobotControl::Request>();
-  request->command = CMD_DISCONNECT;
+  std::thread([this]() {
+    auto request = std::make_shared<jaka_msgs::srv::RobotControl::Request>();
+    request->command = CMD_DISCONNECT;
 
-  auto future = robot_control_client_->async_send_request(request);
-  bool success =
-      (future.wait_for(std::chrono::seconds(5)) == std::future_status::ready);
+    auto future = robot_control_client_->async_send_request(request);
+    const auto success =
+        (future.wait_for(std::chrono::seconds(5)) == std::future_status::ready);
 
-  connecting_ = false;
-  connected_ = !success ? connected_ : false;
-  RCLCPP_INFO(node_->get_logger(), "Disconnect: %s",
-              success ? "Success" : "Failed");
-  emit statusChanged();
-  return success;
+    connecting_ = false;
+    connected_ = !success ? connected_ : false;
+    RCLCPP_INFO(node_->get_logger(), "Disconnect: %s",
+                success ? "Success" : "Failed");
+    emit statusChanged();
+  }).detach();
+
+  return true;
 }
 
-void RobotManager::updateRobotConnectConfig() { setParameter("robot_ip", ip_); }
+void RobotManager::updateRobotConnectConfig() {
+  SetParameter_("robot_ip", ip_);
+}
 
 bool RobotManager::power(bool power) {
-  if (!robot_control_client_->wait_for_service(std::chrono::seconds(5))) {
-    RCLCPP_ERROR(node_->get_logger(), "Robot control service not available");
-    return false;
-  }
+  powering_ = true;
+  emit statusChanged();
 
-  auto request = std::make_shared<jaka_msgs::srv::RobotControl::Request>();
-  request->command = power ? CMD_POWER_ON : CMD_POWER_OFF;
+  std::thread([this, power]() {
+    QScopeGuard guard([this]() {
+      powering_ = false;
+      emit statusChanged();
+    });
 
-  auto future = robot_control_client_->async_send_request(request);
-  // 上电约 8s 后返回
-  if (future.wait_for(std::chrono::seconds(8)) != std::future_status::ready) {
-    RCLCPP_ERROR(node_->get_logger(), "Failed to call robot control service");
-    return false;
-  }
+    if (!robot_control_client_->wait_for_service(std::chrono::seconds(5))) {
+      RCLCPP_ERROR(node_->get_logger(), "Robot control service not available");
+      return;
+    }
 
-  auto result = future.get();
-  if (!result->success) {
-    RCLCPP_ERROR(node_->get_logger(), "Power control failed: %s",
-                 result->message.c_str());
-    return false;
-  }
+    auto request = std::make_shared<jaka_msgs::srv::RobotControl::Request>();
+    request->command = power ? CMD_POWER_ON : CMD_POWER_OFF;
 
-  RCLCPP_INFO(node_->get_logger(), "Power control: %s",
-              result->message.c_str());
+    auto future = robot_control_client_->async_send_request(request);
+    // 上电约 8s 后返回
+    if (future.wait_for(std::chrono::seconds(8)) != std::future_status::ready) {
+      RCLCPP_ERROR(node_->get_logger(), "Failed to call robot control service");
+      return;
+    }
+
+    auto result = future.get();
+    if (!result->success) {
+      RCLCPP_ERROR(node_->get_logger(), "Power control failed: %s",
+                   result->message.c_str());
+      return;
+    }
+    RCLCPP_INFO(node_->get_logger(), "Power control: %s",
+                result->message.c_str());
+  }).detach();
+
   return true;
 }
 
 bool RobotManager::enable(bool enable) {
-  if (!robot_control_client_->wait_for_service(std::chrono::seconds(5))) {
-    RCLCPP_ERROR(node_->get_logger(), "Robot control service not available");
-    return false;
-  }
+  enabling_ = true;
+  emit statusChanged();
 
-  auto request = std::make_shared<jaka_msgs::srv::RobotControl::Request>();
-  request->command = enable ? CMD_ENABLE : CMD_DISABLE;
+  std::thread([this, enable]() {
+    QScopeGuard guard([this]() {
+      enabling_ = false;
+      emit statusChanged();
+    });
 
-  auto future = robot_control_client_->async_send_request(request);
-  // 使能约 8s 后返回
-  if (future.wait_for(std::chrono::seconds(8)) != std::future_status::ready) {
-    RCLCPP_ERROR(node_->get_logger(), "Failed to call robot control service");
-    return false;
-  }
+    if (!robot_control_client_->wait_for_service(std::chrono::seconds(5))) {
+      RCLCPP_ERROR(node_->get_logger(), "Robot control service not available");
+      return;
+    }
 
-  auto result = future.get();
-  if (!result->success) {
-    RCLCPP_ERROR(node_->get_logger(), "Enable control failed: %s",
-                 result->message.c_str());
-    return false;
-  }
+    auto request = std::make_shared<jaka_msgs::srv::RobotControl::Request>();
+    request->command = enable ? CMD_ENABLE : CMD_DISABLE;
 
-  RCLCPP_INFO(node_->get_logger(), "Enable control: %s",
-              result->message.c_str());
+    auto future = robot_control_client_->async_send_request(request);
+    // 使能约 8s 后返回
+    if (future.wait_for(std::chrono::seconds(8)) != std::future_status::ready) {
+      RCLCPP_ERROR(node_->get_logger(), "Failed to call robot control service");
+      return;
+    }
+
+    auto result = future.get();
+    if (!result->success) {
+      RCLCPP_ERROR(node_->get_logger(), "Enable control failed: %s",
+                   result->message.c_str());
+      return;
+    }
+
+    RCLCPP_INFO(node_->get_logger(), "Enable control: %s",
+                result->message.c_str());
+  }).detach();
+
   return true;
 }
 
 bool RobotManager::clearError() {
-  if (!robot_control_client_->wait_for_service(std::chrono::seconds(5))) {
-    RCLCPP_ERROR(node_->get_logger(), "Robot control service not available");
-    return false;
-  }
+  std::thread([this]() {
+    if (!robot_control_client_->wait_for_service(std::chrono::seconds(5))) {
+      RCLCPP_ERROR(node_->get_logger(), "Robot control service not available");
+      emit statusChanged();
+      return;
+    }
 
-  auto request = std::make_shared<jaka_msgs::srv::RobotControl::Request>();
-  request->command = CMD_CLEAR_ERROR;
+    auto request = std::make_shared<jaka_msgs::srv::RobotControl::Request>();
+    request->command = CMD_CLEAR_ERROR;
 
-  auto future = robot_control_client_->async_send_request(request);
-  if (future.wait_for(std::chrono::seconds(5)) != std::future_status::ready) {
-    RCLCPP_ERROR(node_->get_logger(), "Failed to call robot control service");
-    return false;
-  }
+    auto future = robot_control_client_->async_send_request(request);
+    if (future.wait_for(std::chrono::seconds(5)) != std::future_status::ready) {
+      RCLCPP_ERROR(node_->get_logger(), "Failed to call robot control service");
+      emit statusChanged();
+      return;
+    }
 
-  auto result = future.get();
-  if (!result->success) {
-    RCLCPP_ERROR(node_->get_logger(), "Clear error failed: %s",
-                 result->message.c_str());
-    return false;
-  }
+    auto result = future.get();
+    if (!result->success) {
+      RCLCPP_ERROR(node_->get_logger(), "Clear error failed: %s",
+                   result->message.c_str());
+      emit statusChanged();
+      return;
+    }
 
-  RCLCPP_INFO(node_->get_logger(), "Clear error: %s", result->message.c_str());
+    RCLCPP_INFO(node_->get_logger(), "Clear error: %s",
+                result->message.c_str());
+    emit statusChanged();
+  }).detach();
+
   return true;
 }
 
 bool RobotManager::resetSensor() {
-  if (!robot_control_client_->wait_for_service(std::chrono::seconds(5))) {
-    RCLCPP_ERROR(node_->get_logger(), "Robot control service not available");
-    return false;
-  }
+  std::thread([this]() {
+    if (!robot_control_client_->wait_for_service(std::chrono::seconds(5))) {
+      RCLCPP_ERROR(node_->get_logger(), "Robot control service not available");
+      emit statusChanged();
+      return;
+    }
 
-  auto request = std::make_shared<jaka_msgs::srv::RobotControl::Request>();
-  request->command = CMD_RESET_SENSOR;
+    auto request = std::make_shared<jaka_msgs::srv::RobotControl::Request>();
+    request->command = CMD_RESET_SENSOR;
 
-  auto future = robot_control_client_->async_send_request(request);
-  if (future.wait_for(std::chrono::seconds(5)) != std::future_status::ready) {
-    RCLCPP_ERROR(node_->get_logger(), "Failed to call robot control service");
-    return false;
-  }
+    auto future = robot_control_client_->async_send_request(request);
+    if (future.wait_for(std::chrono::seconds(5)) != std::future_status::ready) {
+      RCLCPP_ERROR(node_->get_logger(), "Failed to call robot control service");
+      emit statusChanged();
+      return;
+    }
 
-  auto result = future.get();
-  if (!result->success) {
-    RCLCPP_ERROR(node_->get_logger(), "Reset sensor failed: %s",
-                 result->message.c_str());
-    return false;
-  }
+    auto result = future.get();
+    if (!result->success) {
+      RCLCPP_ERROR(node_->get_logger(), "Reset sensor failed: %s",
+                   result->message.c_str());
+      emit statusChanged();
+      return;
+    }
 
-  RCLCPP_INFO(node_->get_logger(), "Reset sensor: %s", result->message.c_str());
+    RCLCPP_INFO(node_->get_logger(), "Reset sensor: %s",
+                result->message.c_str());
+    emit statusChanged();
+  }).detach();
+
   return true;
 }
 
-void RobotManager::resetRobotStatus() {
+void RobotManager::ResetRobotStatus_() {
   // 重置所有机械臂状态变量为默认值
   errcode_ = 0;
   inpos_ = false;
@@ -327,7 +375,7 @@ void RobotManager::resetRobotStatus() {
               "Robot status variables reset due to topic disconnection");
 }
 
-void RobotManager::checkTopicConnection() {
+void RobotManager::CheckTopicConnection_() {
   auto now = std::chrono::steady_clock::now();
   auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                      now - last_message_time_)
@@ -345,7 +393,7 @@ void RobotManager::checkTopicConnection() {
                   elapsed);
 
       // 重置机械臂状态变量，因为无法获取真实状态
-      resetRobotStatus();
+      ResetRobotStatus_();
 
     } else {
       RCLCPP_INFO(node_->get_logger(), "Robot status topic reconnected");

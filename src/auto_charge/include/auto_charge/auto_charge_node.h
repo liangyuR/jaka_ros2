@@ -3,6 +3,7 @@
 
 #include "auto_charge/camera_controller.h"
 #include "auto_charge/robot_manager.h"
+#include "task/task_manager.h"
 #include <memory>
 #include <rclcpp/rclcpp.hpp>
 
@@ -20,12 +21,17 @@ public:
 
   RobotManager *GetRobotManager() const { return robot_manager_.get(); }
 
+  TaskManager *GetTaskManager() const { return task_manager_.get(); }
+
 private:
   // 相机控制器
   std::unique_ptr<CameraController> camera_controller_;
 
   // 机器人管理器
   std::unique_ptr<RobotManager> robot_manager_;
+
+  // 任务管理器
+  std::unique_ptr<TaskManager> task_manager_;
 };
 
 } // namespace auto_charge

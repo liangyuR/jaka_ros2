@@ -1,5 +1,6 @@
 #include "robot_controller/robot_controller.h"
 #include <csignal>
+#include <filesystem>
 #include <numbers>
 
 namespace robot_controller {
@@ -153,6 +154,22 @@ void RobotController::handleConnectCommand(
     response->success = true;
     response->message = "Robot already connected.";
     RCLCPP_INFO(this->get_logger(), "Robot already connected.");
+
+    std::string sdk_log_path = std::string(std::getenv("HOME")) + "/log/";
+    std::filesystem::create_directories(sdk_log_path);
+    robot_.set_SDK_filepath((sdk_log_path + "jaka_robot_sdk.log").c_str());
+
+    // 测试 get_SDK_filepath 接口
+    {
+      char sdk_path[256] = {0};
+      int ret = robot_.get_SDK_filepath(sdk_path, sizeof(sdk_path));
+      if (ret == ERR_SUCC) {
+        RCLCPP_INFO(this->get_logger(), "SDK log path: %s", sdk_path);
+      } else {
+        RCLCPP_WARN(this->get_logger(),
+                    "Failed to get SDK log path, error code: %d", ret);
+      }
+    }
     return;
   }
 
@@ -165,6 +182,22 @@ void RobotController::handleConnectCommand(
     response->message = "Failed to connect to robot.";
     RCLCPP_ERROR(this->get_logger(), "Failed to connect to robot.");
     return;
+  }
+
+  std::string sdk_log_path = std::string(std::getenv("HOME")) + "/log/";
+  std::filesystem::create_directories(sdk_log_path);
+  robot_.set_SDK_filepath((sdk_log_path + "jaka_robot_sdk.log").c_str());
+
+  // 测试 get_SDK_filepath 接口
+  {
+    char sdk_path[256] = {0};
+    int ret = robot_.get_SDK_filepath(sdk_path, sizeof(sdk_path));
+    if (ret == ERR_SUCC) {
+      RCLCPP_INFO(this->get_logger(), "SDK log path: %s", sdk_path);
+    } else {
+      RCLCPP_WARN(this->get_logger(),
+                  "Failed to get SDK log path, error code: %d", ret);
+    }
   }
 
   is_connected_ = true;
@@ -295,8 +328,31 @@ void RobotController::handleClearErrorCommand(
     return;
   }
 
-  robot_.clear_error();
-  error_message_ = "";
+  if (robot_.clear_error() != ERR_SUCC) {
+    response->success = false;
+    response->message = "Failed to clear error.";
+    RCLCPP_ERROR(this->get_logger(), "Failed to clear error.");
+    return;
+  }
+
+  int is_in_collision = 0;
+  if (robot_.is_in_collision(&is_in_collision) != ERR_SUCC) {
+    response->success = false;
+    response->message = "Failed to check collision.";
+    RCLCPP_ERROR(this->get_logger(), "Failed to check collision.");
+    return;
+  }
+
+  if (is_in_collision == 1) {
+    if (robot_.collision_recover() != ERR_SUCC) {
+      response->success = false;
+      response->message = "Failed to recover from collision.";
+      RCLCPP_ERROR(this->get_logger(), "Failed to recover from collision.");
+      return;
+    }
+  }
+
+  error_message_.clear();
   has_error_ = false;
   response->success = true;
   response->message = "Error cleared successfully";
@@ -365,9 +421,13 @@ void RobotController::handleAccepted(
 void RobotController::executeTrajectory(
     const std::shared_ptr<rclcpp_action::ServerGoalHandle<
         control_msgs::action::FollowJointTrajectory>> &goal_handle) {
+  RCLCPP_INFO(this->get_logger(), "executeTrajectory");
+
+  executing_trajectory_ = true;
 
   try {
     // 启用伺服模式
+    RCLCPP_INFO(this->get_logger(), "enable servo_move");
     robot_.servo_move_enable(true); // NOLINT
 
     auto goal = goal_handle->get_goal();
@@ -383,9 +443,10 @@ void RobotController::executeTrajectory(
     for (int i = 1; i < point_num; i++) {
       // 检查是否被取消
       if (goal_handle->is_canceling()) {
+        RCLCPP_INFO(this->get_logger(),
+                    "Trajectory execution canceled by user");
         robot_.motion_abort();
         robot_.servo_move_enable(false); // NOLINT
-        RCLCPP_INFO(this->get_logger(), "Trajectory execution canceled");
 
         auto result = std::make_shared<
             control_msgs::action::FollowJointTrajectory::Result>();
@@ -402,13 +463,14 @@ void RobotController::executeTrajectory(
       float duration =
           static_cast<float>(traj.points[i].time_from_start.sec) +
           static_cast<float>(traj.points[i].time_from_start.nanosec) * 1e-9;
-      float dt = duration - last_duration; // NOLINT
+      float dt = duration - last_duration;
       last_duration = duration;
 
       // 计算步数
       int step_num = std::max(static_cast<int>(dt / 0.008f), 1); // NOLINT
 
       // 执行运动
+      RCLCPP_INFO(this->get_logger(), "servo_j");
       int sdk_result = robot_.servo_j(&joint_pose, MoveMode::ABS, step_num);
       if (sdk_result != 0) {
         auto error_it = error_map_.find(sdk_result);
@@ -428,17 +490,36 @@ void RobotController::executeTrajectory(
                    joint_pose.jVal[5], dt, step_num);
     }
 
-    // 等待到达最终位置
+    // 等待到达最终位置 - 使用可配置的超时
+    const float final_wait_timeout =
+        this->declare_parameter("final_position_timeout", 10.0f);
+    const auto final_wait_start = std::chrono::steady_clock::now();
+
     while (rclcpp::ok()) {
+      // 检查是否被取消 - 这是 ROS2 Action 的内置取消机制
       if (goal_handle->is_canceling()) {
+        RCLCPP_INFO(this->get_logger(), "Final position wait canceled by user");
         robot_.motion_abort();
         robot_.servo_move_enable(false); // NOLINT
-        RCLCPP_INFO(this->get_logger(), "Trajectory execution canceled");
 
         auto result = std::make_shared<
             control_msgs::action::FollowJointTrajectory::Result>();
         goal_handle->canceled(result);
         return;
+      }
+
+      // 检查最终等待超时 - 这是我们自己实现的保护机制
+      auto current_time = std::chrono::steady_clock::now();
+      auto final_wait_elapsed =
+          std::chrono::duration_cast<std::chrono::duration<float>>(
+              current_time - final_wait_start)
+              .count();
+      if (final_wait_elapsed > final_wait_timeout) {
+        RCLCPP_WARN(
+            this->get_logger(),
+            "Final position wait timeout after %.2f seconds, proceeding anyway",
+            final_wait_elapsed);
+        break;
       }
 
       if (checkJointPosition(joint_pose)) {
@@ -465,6 +546,10 @@ void RobotController::executeTrajectory(
         std::make_shared<control_msgs::action::FollowJointTrajectory::Result>();
     goal_handle->abort(result);
   }
+
+  // 清理状态
+  executing_trajectory_ = false;
+  robot_.servo_move_enable(false); // NOLINT
 }
 
 bool RobotController::checkJointPosition(const JointValue &target_pose,
@@ -502,7 +587,15 @@ void RobotController::emergencyStop() {
     if (is_connected_) {
       robot_.motion_abort();
       robot_.servo_move_enable(false); // NOLINT
-      RCLCPP_WARN(this->get_logger(), "Emergency stop executed");
+
+      if (executing_trajectory_) {
+        executing_trajectory_ = false;
+        RCLCPP_WARN(
+            this->get_logger(),
+            "Emergency stop executed - trajectory execution terminated");
+      } else {
+        RCLCPP_WARN(this->get_logger(), "Emergency stop executed");
+      }
     }
   } catch (const std::exception &e) {
     RCLCPP_ERROR(this->get_logger(), "Exception during emergency stop: %s",

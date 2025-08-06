@@ -120,6 +120,47 @@ ScrollView {
                 Item { Layout.fillWidth: true }
             }
         }
+
+        // 场景控制
+        Pane{
+            Layout.fillWidth: true
+            Layout.leftMargin: 24
+            Layout.rightMargin: 24
+            Material.elevation: 2
+
+            ColumnLayout{
+                Layout.fillHeight: true
+                Layout.preferredWidth: scrollView.width - 48
+                Layout.alignment: Qt.AlignVCenter | Qt.AlignLeft
+                spacing: 32
+
+                Label {
+                    text: "场景控制"
+                    font.pixelSize: 20
+                    font.weight: Font.Medium
+                    Layout.alignment: Qt.AlignLeft
+                }
+
+                // 横向排列场景控制按钮
+                RowLayout {
+                    Layout.alignment: Qt.AlignHCenter
+                    spacing: 24
+                    Material.foreground: "white"
+
+                    Button {
+                        text: "加载默认场景"
+                        Material.background: Material.primary
+                        font.pixelSize: 18
+                        Layout.preferredWidth: 200
+                        Layout.alignment: Qt.AlignHCenter
+                        onClicked: {
+                            robotManager.InitScene()
+                            console.log("加载默认场景")
+                        }
+                    }
+                }
+            }
+        }
         
         // 取拍照位
         Pane {

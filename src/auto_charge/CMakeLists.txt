@@ -20,6 +20,12 @@ find_package(yaml-cpp REQUIRED)
 find_package(ament_index_cpp REQUIRED)
 find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2)
 
+# MoveIt 2 相关依赖
+find_package(moveit_ros_planning_interface REQUIRED)
+find_package(moveit_msgs REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(shape_msgs REQUIRED)
+
 # 启用 QML 语言服务器支持
 set(QT_QML_GENERATE_QMLLS_INI ON)
 
@@ -44,6 +50,7 @@ qt_add_resources(AUTO_CHARGE_RESOURCES qml/resources.qrc)
 
 file(GLOB_RECURSE PROJECT_SOURCES
     src/*.cpp
+    src/task/*.cpp
     include/*.h
 )
 
@@ -71,6 +78,10 @@ ament_target_dependencies(auto_charge PUBLIC
   jaka_msgs
   robot_controller
   ament_index_cpp
+  moveit_ros_planning_interface
+  moveit_msgs
+  tf2_geometry_msgs
+  shape_msgs
 )
 
 install(TARGETS auto_charge

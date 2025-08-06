@@ -52,7 +52,7 @@ Item {
                     }
                     
                     Label {
-                        text: "© 2024 Auto Charge Team"
+                        text: "© 2025 JX Team"
                     }
                     
                     Button {

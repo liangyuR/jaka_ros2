@@ -53,6 +53,9 @@ public:
   // 停止控制器
   void StopController();
 
+  // 检查是否正在执行轨迹
+  bool isExecutingTrajectory() const { return executing_trajectory_; }
+
 private:
   // 机器人实例
   JAKAZuRobot robot_;
@@ -82,6 +85,7 @@ private:
   bool is_enabled_;
   bool is_connected_;
   bool has_error_;
+  bool executing_trajectory_{false};
   std::string error_message_;
 
   std::map<int, std::string> error_map_;

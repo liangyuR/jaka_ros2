@@ -14,7 +14,7 @@ Panels:
         - /MotionPlanning1/Planning Metrics1
         - /MotionPlanning1/Planned Path1
       Splitter Ratio: 0.5
-    Tree Height: 481
+    Tree Height: 140
   - Class: rviz_common/Help
     Name: Help
   - Class: rviz_common/Views
@@ -43,7 +43,7 @@ Visualization Manager:
       Plane Cell Count: 10
       Reference Frame: <Fixed Frame>
       Value: true
-    - Acceleration_Scaling_Factor: 0.1
+    - Acceleration_Scaling_Factor: 0.06
       Class: moveit_rviz_plugin/MotionPlanning
       Enabled: true
       Move Group Namespace: ""
@@ -123,7 +123,7 @@ Visualization Manager:
         Robot Color: 150; 50; 150
         Show Robot Collision: false
         Show Robot Visual: true
-        Show Trail: true
+        Show Trail: false
         State Display Time: 0.05 s
         Trail Step Size: 30
         Trajectory Topic: display_planned_path
@@ -143,7 +143,7 @@ Visualization Manager:
         Joint Violation Color: 255; 0; 255
         Planning Group: jaka_zu12
         Query Goal State: true
-        Query Start State: true
+        Query Start State: false
         Show Workspace: false
         Start State Alpha: 1
         Start State Color: 0; 255; 0
@@ -231,30 +231,30 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 1.3004016876220703
+      Distance: 2.505702495574951
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0
-        Y: 0
-        Z: 0
+        X: 0.12616875767707825
+        Y: -0.202641561627388
+        Z: 0.4400210976600647
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.025203470140695572
+      Pitch: 0.18539856374263763
       Target Frame: world
       Value: Orbit (rviz_default_plugins)
-      Yaw: 4.680839538574219
+      Yaw: 2.6603989601135254
     Saved: ~
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 1335
+  Height: 818
   Help:
     collapsed: false
   Hide Left Dock: false
@@ -263,9 +263,9 @@ Window Geometry:
     collapsed: false
   MotionPlanning - Trajectory Slider:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd0000000100000000000002b4000004e1fc0200000005fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000003f00fffffffb000000100044006900730070006c006100790073010000003b0000021c000000c700fffffffb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e0067010000025d000001e80000016900fffffffb0000000800480065006c0070000000029a0000006e0000006e00fffffffb0000000a00560069006500770073010000044b000000d1000000a000ffffff00000aaa000004e100000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd000000010000000000000219000002dcfc0200000005fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000003f00fffffffb000000100044006900730070006c006100790073010000003b000000c7000000c700fffffffb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e00670100000108000001690000016900fffffffb0000000800480065006c0070000000029a0000006e0000006e00fffffffb0000000a005600690065007700730100000277000000a0000000a000ffffff0000036d000002dc00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Views:
     collapsed: false
-  Width: 3428
-  X: -53
-  Y: 175
+  Width: 1420
+  X: 51
+  Y: 81

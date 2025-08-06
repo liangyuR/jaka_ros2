@@ -3,6 +3,7 @@
 #include "jaka_sdk/JAKAZuRobot.h"
 #include "jaka_sdk/jktypes.h"
 #include <rclcpp/rclcpp.hpp>
+#include <string>
 #include <vector>
 
 namespace robot_controller {
@@ -24,14 +25,18 @@ class AdvancedOperations {
 public:
   explicit AdvancedOperations(JAKAZuRobot &robot, rclcpp::Logger logger);
 
+  void loadConfig(const std::string &config_path);
+
   // IO传感器等初始化
   void InitStatus(const INIStatus &status);
 
   // 枪在入口时调用，采用力控方式渐进插入，并自动检测是否插入到位
-  bool InsertGun();
+  bool InsertPlace();
+  bool InsertCharge();
 
   // 枪在出口时调用，采用力控方式拉出，并自动检测是否拉出到位
-  bool PullGun();
+  bool PullPlace();
+  bool PullCharge();
 
   // 连接枪时调用, 此时连接件应该与枪尾对齐, 会多次尝试连接, 直到连接成功,
   // 或者失败超过N.

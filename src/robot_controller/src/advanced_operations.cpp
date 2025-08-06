@@ -10,6 +10,10 @@ AdvancedOperations::AdvancedOperations(JAKAZuRobot &robot,
 }
 
 void AdvancedOperations::InitStatus(const INIStatus &status) {
+  // 检查传感器是否开启
+
+  // IO是否正确
+
   switch (status) {
   case kInsert:
     break;
@@ -25,7 +29,62 @@ void AdvancedOperations::InitStatus(const INIStatus &status) {
   }
 }
 
-bool AdvancedOperations::InsertGun() {
+bool AdvancedOperations::InsertPlace() {
+  RCLCPP_INFO(logger_, "Starting gun insertion operation");
+
+  try {
+    InitStatus(kInsert);
+
+    const auto ret = robot_.get_tcp_position(&reference_pose_);
+    if (ret != ERR_SUCC) {
+      RCLCPP_ERROR(logger_, "Failed to get TCP position, error code: %d", ret);
+      return false;
+    }
+
+    if (!executeForceMotion(reference_pose_, 100, {}, {})) {
+      RCLCPP_ERROR(logger_, "Failed to execute force motion");
+      return false;
+    }
+
+    int attempt = 0;
+    const int max_attempts = 3;
+    bool success = false;
+
+    while (attempt < max_attempts) {
+      RCLCPP_INFO(logger_, "Insert attempt %d/%d", attempt + 1, max_attempts);
+
+      if (setForce({{0, 1, 0, 0, 0, 0}})) {
+        success = true;
+        break;
+      }
+
+      // linemove
+      CartesianPose move_offset = {0, 0, 20, 0, 0, 0};
+      robot_.linear_move(&move_offset, MoveMode::ABS, true, 15, 0.1, 0, nullptr,
+                         3.14, 12.56);
+
+      if (checkMotionStatus(45, 5)) {
+        reference_pose_ = {0, 0, 0, 0, 0, 0};
+        success = true;
+        break;
+      }
+      attempt++;
+    }
+
+    if (success) {
+      RCLCPP_INFO(logger_, "Gun insertion completed successfully");
+      return true;
+    }
+    RCLCPP_ERROR(logger_, "Gun insertion failed after %d attempts",
+                 max_attempts);
+    return false;
+  } catch (const std::exception &e) {
+    RCLCPP_ERROR(logger_, "Exception during gun insertion: %s", e.what());
+    return false;
+  }
+}
+
+bool AdvancedOperations::InsertCharge() {
   RCLCPP_INFO(logger_, "Starting gun insertion operation");
 
   try {
@@ -42,10 +101,18 @@ bool AdvancedOperations::InsertGun() {
     }
 
     int attempt = 0;
-    while (attempt < 3) {
+    const int max_attempts = 3;
+    bool success = false;
+
+    while (attempt < max_attempts) {
+      RCLCPP_INFO(logger_, "Insert charge attempt %d/%d", attempt + 1,
+                  max_attempts);
+
       if (setForce({{0, 1, 0, 0, 0, 0}})) {
+        success = true;
         break;
       }
+
       // linemove
       CartesianPose move_offset = {0, 0, 20, 0, 0, 0};
       robot_.linear_move(&move_offset, MoveMode::ABS, true, 15, 0.1, 0, nullptr,
@@ -53,35 +120,88 @@ bool AdvancedOperations::InsertGun() {
 
       if (checkMotionStatus(45, 5)) {
         reference_pose_ = {0, 0, 0, 0, 0, 0};
+        success = true;
         break;
       }
       attempt++;
     }
 
-    RCLCPP_INFO(logger_, "Gun insertion completed successfully");
-    return true;
+    if (success) {
+      RCLCPP_INFO(logger_, "Gun insertion charge completed successfully");
+      return true;
+    } else {
+      RCLCPP_ERROR(logger_, "Gun insertion charge failed after %d attempts",
+                   max_attempts);
+      return false;
+    }
   } catch (const std::exception &e) {
     RCLCPP_ERROR(logger_, "Exception during gun insertion: %s", e.what());
     return false;
   }
 }
 
-bool AdvancedOperations::PullGun() {
+bool AdvancedOperations::PullPlace() {
+  RCLCPP_INFO(logger_, "Starting gun pulling operation");
+}
+
+bool AdvancedOperations::PullCharge() {
   RCLCPP_INFO(logger_, "Starting gun pulling operation");
 
   try {
-    // 设置IO
-    if (!setIO(1, false)) {
-      RCLCPP_ERROR(logger_, "Failed to set digital output for gun pulling");
+    InitStatus(kPull);
+
+    const auto ret = robot_.get_tcp_position(&reference_pose_);
+    if (ret != ERR_SUCC) {
+      RCLCPP_ERROR(logger_, "Failed to get TCP position, error code: %d", ret);
       return false;
     }
 
-    // 执行运动
-    RCLCPP_DEBUG(logger_, "Moving to pulling position");
-    // ... 运动逻辑
+    int attempt = 0;
+    const int max_attempts = 3;
+    bool success = false;
 
-    RCLCPP_INFO(logger_, "Gun pulling completed successfully");
-    return true;
+    while (attempt < max_attempts) {
+      RCLCPP_INFO(logger_, "Pull charge attempt %d/%d", attempt + 1,
+                  max_attempts);
+
+      // 设置IO
+      if (!setIO(kQuick, false)) {
+        RCLCPP_ERROR(logger_, "Failed to set digital output for gun pulling");
+        attempt++;
+        continue;
+      }
+
+      // 执行力控运动
+      if (!executeForceMotion(reference_pose_, 100, {}, {})) {
+        RCLCPP_ERROR(logger_, "Failed to execute force motion for pulling");
+        attempt++;
+        continue;
+      }
+
+      // 检查拉出状态
+      if (!getIO(KQuickCheck)) {
+        success = true;
+        break;
+      }
+
+      attempt++;
+
+      // 短暂等待后重试
+      if (attempt < max_attempts) {
+        RCLCPP_INFO(logger_, "Pull not successful, waiting before retry...");
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+      }
+    }
+
+    if (success) {
+      RCLCPP_INFO(logger_, "Gun pulling completed successfully");
+      return true;
+    } else {
+      RCLCPP_ERROR(logger_, "Gun pulling failed after %d attempts",
+                   max_attempts);
+      return false;
+    }
+
   } catch (const std::exception &e) {
     RCLCPP_ERROR(logger_, "Exception during gun pulling: %s", e.what());
     return false;
@@ -92,18 +212,61 @@ bool AdvancedOperations::ConnectGun() {
   RCLCPP_INFO(logger_, "Starting gun connection operation");
 
   try {
-    // 设置IO
-    if (!setIO(2, true)) {
-      RCLCPP_ERROR(logger_, "Failed to set digital output for gun connection");
+    InitStatus(kConnect);
+
+    const auto ret = robot_.get_tcp_position(&reference_pose_);
+    if (ret != ERR_SUCC) {
+      RCLCPP_ERROR(logger_, "Failed to get TCP position, error code: %d", ret);
       return false;
     }
 
-    // 执行运动
-    RCLCPP_DEBUG(logger_, "Moving to connection position");
-    // ... 运动逻辑
+    int attempt = 0;
+    const int max_attempts = 5; // 连接操作可以尝试更多次
+    bool success = false;
 
-    RCLCPP_INFO(logger_, "Gun connection completed successfully");
-    return true;
+    while (attempt < max_attempts) {
+      RCLCPP_INFO(logger_, "Connect attempt %d/%d", attempt + 1, max_attempts);
+
+      // 设置IO
+      if (!setIO(kQuick, true)) {
+        RCLCPP_ERROR(logger_,
+                     "Failed to set digital output for gun connection");
+        attempt++;
+        continue;
+      }
+
+      // 执行力控运动
+      if (!executeForceMotion(reference_pose_, 50, {}, {})) {
+        RCLCPP_ERROR(logger_, "Failed to execute force motion for connection");
+        attempt++;
+        continue;
+      }
+
+      // 检查连接状态
+      if (getIO(KQuickCheck)) {
+        success = true;
+        break;
+      }
+
+      attempt++;
+
+      // 短暂等待后重试
+      if (attempt < max_attempts) {
+        RCLCPP_INFO(logger_,
+                    "Connection not successful, waiting before retry...");
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+      }
+    }
+
+    if (success) {
+      RCLCPP_INFO(logger_, "Gun connection completed successfully");
+      return true;
+    } else {
+      RCLCPP_ERROR(logger_, "Gun connection failed after %d attempts",
+                   max_attempts);
+      return false;
+    }
+
   } catch (const std::exception &e) {
     RCLCPP_ERROR(logger_, "Exception during gun connection: %s", e.what());
     return false;

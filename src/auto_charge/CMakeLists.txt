@@ -14,6 +14,7 @@ find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(jaka_msgs REQUIRED)
+find_package(robot_controller REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(ament_index_cpp REQUIRED)
@@ -21,16 +22,6 @@ find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2)
 
 # 启用 QML 语言服务器支持
 set(QT_QML_GENERATE_QMLLS_INI ON)
-
-set(PROJECT_SOURCES
-    src/main.cpp
-    src/auto_charge_node.cpp
-    src/camera_controller.cpp
-    src/robot_manager.cpp
-    include/auto_charge/auto_charge_node.h
-    include/auto_charge/camera_controller.h
-    include/auto_charge/robot_manager.h
-)
 
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/qml/qtquickcontrols2.conf
@@ -50,6 +41,11 @@ install(DIRECTORY config/
 )
 
 qt_add_resources(AUTO_CHARGE_RESOURCES qml/resources.qrc)
+
+file(GLOB_RECURSE PROJECT_SOURCES
+    src/*.cpp
+    include/*.h
+)
 
 qt_add_executable(auto_charge
     MANUAL_FINALIZATION
@@ -73,6 +69,7 @@ ament_target_dependencies(auto_charge PUBLIC
   sensor_msgs
   geometry_msgs
   jaka_msgs
+  robot_controller
   ament_index_cpp
 )
 

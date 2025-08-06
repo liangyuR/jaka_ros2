@@ -191,5 +191,6 @@ ros2 launch jaka_zu12_moveit_config demo.launch.py
 
 # BUILD
 vcpkg install abseil:x64-linux
+vcpkg install serdepp:x64-linux
 just b
 待完善

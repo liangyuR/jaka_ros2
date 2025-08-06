@@ -15,6 +15,8 @@ find_package(geometry_msgs REQUIRED)
 find_package(jaka_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 
+find_package(yaml-cpp REQUIRED)
+
 # 设置库目录
 set(LIBRARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
@@ -44,10 +46,20 @@ ament_target_dependencies(
 )
 
 # 链接 JAKA SDK 库
-target_link_libraries(robot_controller_node ${LIBRARY_DIR}/libjakaAPI.so)
+set(LIBRARY_LIST ${LIBRARY_DIR}/libjakaAPI.so yaml-cpp)
+target_link_libraries(robot_controller_node ${LIBRARY_LIST})
 
 install(TARGETS robot_controller_node
   DESTINATION lib/${PROJECT_NAME})
+
+# Install headers
+install(DIRECTORY include/
+  DESTINATION include
+  FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp"
+)
+
+# Export include directories for other packages
+ament_export_include_directories(include)
 
 # Install launch files
 install(DIRECTORY launch/
